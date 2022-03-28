@@ -1,0 +1,25 @@
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+storage
+
+.DS_Store
+env
+.venv
+.mypy_cache
+
+__pycache__
+*.egg-info
+*.pyc
+
+cloud_sql_proxy
+
+# Machine specific
+.venv
+.idea
+.mypy_cache
+.vscode
+cloud_sql_proxy
+
+# App Configurations
+# ignore airflow conf
+airflow

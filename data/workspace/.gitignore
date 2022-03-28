@@ -1,0 +1,17 @@
+# Sensitive AWS Info
+# ignore ACM certificate
+aws/acm
+
+# Sensitive K8s Info
+# k8s/prd may contain secrets which we do not want on version control
+k8s/prd
+# ingore dev manifests
+k8s/dev
+# ingore stg manifests
+k8s/stg
+# ingore test manifests
+k8s/test
+
+# Secrets
+# ignore secret keys
+secrets
