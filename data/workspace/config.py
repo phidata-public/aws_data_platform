@@ -47,13 +47,27 @@ devbox = Devbox(
     link_airflow_home=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
+    airflow_webserver_host_port=8180,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     dev_mode=DevboxDevModeArgs(),
     db_connections={dev_db.name: dev_db.get_connection_url_docker()},
 )
+dev_databox = Databox(
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    # Init Airflow webserver when the container starts
+    init_airflow_webserver=True,
+    # Init Airflow scheduler as a deamon process,
+    # init_airflow_scheduler=True,
+    # Creates an airflow user with username: test, pass: test,
+    create_airflow_test_user=True,
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    db_connections={dev_db.name: dev_db.get_connection_url_docker()},
+)
 dev_docker_config = DockerConfig(
-    apps=[dev_db, devbox],
+    apps=[dev_db, devbox, dev_databox],
 )
 
 ######################################################
@@ -144,15 +158,29 @@ prd_aws_config = AwsConfig(
 ######################################################
 ## Applications running on EKS Cluster
 ######################################################
-# The password is created on K8s as a Secret, it needs to be in base64
-# echo "password" | base64
-prd_pg = PostgresDb(
+prd_db = PostgresDb(
     name="prd-db",
     postgres_user="prd",
+    # The password is created on K8s as a Secret, it needs to be in base64
+    # echo "password" | base64
     postgres_password="cHJkCg==",
     postgres_db="prd",
 )
-databox = Databox()
+prd_databox = Databox(
+    env={"findme_key": "findme_value"},
+    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yaml"),
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    # Init Airflow webserver when the container starts
+    init_airflow_webserver=True,
+    # Init Airflow scheduler as a deamon process,
+    # init_airflow_scheduler=True,
+    # Creates an airflow user with username: test, pass: test,
+    create_airflow_test_user=True,
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    db_connections={prd_db.name: prd_db.get_connection_url_docker()},
+)
 airflow = Airflow(enabled=False)
 jupyter = Jupyter(enabled=False)
 
@@ -200,7 +228,7 @@ traefik_ingress_route = IngressRoute(
 
 prd_k8s_config = K8sConfig(
     env="prd",
-    apps=[prd_pg, databox, airflow, jupyter, traefik_ingress_route],
+    apps=[prd_db, prd_databox, airflow, jupyter, traefik_ingress_route],
     create_resources=[whoami_k8s_rg],
     eks_cluster=data_eks_cluster,
 )
