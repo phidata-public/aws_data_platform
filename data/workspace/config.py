@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from phidata.app.airflow import Airflow
+from phidata.app.airflow import AirflowWebserver
 from phidata.app.databox import Databox
 from phidata.app.jupyter import Jupyter
 from phidata.app.devbox import Devbox, DevboxDevModeArgs
@@ -29,29 +29,29 @@ from data.workspace.whoami import whoami_k8s_rg, whoami_service, whoami_port
 
 dev_db = PostgresDb(
     name="dev-db",
-    postgres_db="dev",
-    postgres_user="dev",
-    postgres_password="dev",
+    db_user="dev",
+    db_password="dev",
+    db_schema="dev",
     # You can connect to this db on port 5532 (on the host machine)
     container_host_port=5532,
 )
 devbox = Devbox(
     # Mount Aws config on the container
     mount_aws_config=True,
+    # Mount airflow home from container to host machine
+    # useful when debugging the airflow conf
+    mount_airflow_home=False,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
     # Init Airflow scheduler as a deamon process,
     # init_airflow_scheduler=True,
-    # Create a soft link from airflow_dir to airflow_home,
-    # Useful when debugging the airflow conf,
-    link_airflow_home=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
-    airflow_webserver_host_port=8180,
+    airflow_webserver_host_port=8280,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     dev_mode=DevboxDevModeArgs(),
-    db_connections={dev_db.name: dev_db.get_connection_url_docker()},
+    db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
 )
 dev_databox = Databox(
     # Mount Aws config on the container
@@ -62,12 +62,26 @@ dev_databox = Databox(
     # init_airflow_scheduler=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
+    airflow_webserver_host_port=8180,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={dev_db.name: dev_db.get_connection_url_docker()},
+    db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
+)
+dev_airflow_ws = AirflowWebserver(
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    init_airflow_db=True,
+    wait_for_db=True,
+    db_app=dev_db,
+    db_schema="airflow",
+    # Creates an airflow user with username: test, pass: test,
+    create_airflow_test_user=True,
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
 )
 dev_docker_config = DockerConfig(
-    apps=[dev_db, devbox, dev_databox],
+    apps=[dev_db, devbox, dev_databox, dev_airflow_ws],
 )
 
 ######################################################
@@ -160,11 +174,11 @@ prd_aws_config = AwsConfig(
 ######################################################
 prd_db = PostgresDb(
     name="prd-db",
-    postgres_user="prd",
+    db_user="prd",
     # The password is created on K8s as a Secret, it needs to be in base64
     # echo "password" | base64
-    postgres_password="cHJkCg==",
-    postgres_db="prd",
+    db_password="cHJkCg==",
+    db_schema="prd",
 )
 prd_databox = Databox(
     env={"findme_key": "findme_value"},
@@ -179,9 +193,9 @@ prd_databox = Databox(
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={prd_db.name: prd_db.get_connection_url_docker()},
+    db_connections={prd_db.name: prd_db.get_db_connection_url_docker()},
 )
-airflow = Airflow(enabled=False)
+airflow = AirflowWebserver(enabled=False)
 jupyter = Jupyter(enabled=False)
 
 # Traefik Ingress
