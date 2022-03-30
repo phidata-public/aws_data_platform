@@ -58,8 +58,6 @@ dev_databox = Databox(
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
-    # Init Airflow scheduler as a deamon process,
-    # init_airflow_scheduler=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     airflow_webserver_host_port=8180,
@@ -73,7 +71,6 @@ dev_airflow_ws = AirflowWebserver(
     init_airflow_db=True,
     wait_for_db=True,
     db_app=dev_db,
-    db_schema="airflow",
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
@@ -175,27 +172,37 @@ prd_aws_config = AwsConfig(
 prd_db = PostgresDb(
     name="prd-db",
     db_user="prd",
-    # The password is created on K8s as a Secret, it needs to be in base64
-    # echo "password" | base64
-    db_password="cHJkCg==",
     db_schema="prd",
+    secrets_file=ws_dir_path.joinpath("secrets/prd_postgres_secrets.yml"),
 )
 prd_databox = Databox(
     env={"findme_key": "findme_value"},
-    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yaml"),
+    env_file=ws_dir_path.joinpath("env/databox_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
     # Mount Aws config on the container
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
-    # Init Airflow scheduler as a deamon process,
-    # init_airflow_scheduler=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={prd_db.name: prd_db.get_db_connection_url_docker()},
+    db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
 )
-airflow = AirflowWebserver(enabled=False)
+prd_airflow_ws = AirflowWebserver(
+    env={"findme_key": "findme_value"},
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    init_airflow_db=True,
+    wait_for_db=True,
+    db_app=prd_db,
+    # Creates an airflow user with username: test, pass: test,
+    create_airflow_test_user=True,
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
+)
 jupyter = Jupyter(enabled=False)
 
 # Traefik Ingress
@@ -207,6 +214,16 @@ routes = [
             {
                 "name": whoami_service.service_name,
                 "port": whoami_port.service_port,
+            }
+        ],
+    },
+    {
+        "match": f"Host(`airflow.{domain}`)",
+        "kind": "Rule",
+        "services": [
+            {
+                "name": prd_airflow_ws.get_service_name(),
+                "port": prd_airflow_ws.get_service_port(),
             }
         ],
     },
@@ -242,7 +259,7 @@ traefik_ingress_route = IngressRoute(
 
 prd_k8s_config = K8sConfig(
     env="prd",
-    apps=[prd_db, prd_databox, airflow, jupyter, traefik_ingress_route],
+    apps=[prd_db, prd_databox, prd_airflow_ws, jupyter, traefik_ingress_route],
     create_resources=[whoami_k8s_rg],
     eks_cluster=data_eks_cluster,
 )

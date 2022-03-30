@@ -3,7 +3,7 @@
 storage
 
 .DS_Store
-env
+/env
 .venv
 .mypy_cache
 
@@ -22,4 +22,4 @@ cloud_sql_proxy
 
 # App Configurations
 # ignore airflow conf
-airflow
+/airflow
