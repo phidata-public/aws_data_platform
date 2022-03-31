@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 version = "0.1.0"
-phidata_version = "0.1.8"
+phidata_version = "0.1.9"
 
 setup(
     name="data",

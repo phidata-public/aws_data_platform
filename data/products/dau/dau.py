@@ -29,7 +29,7 @@ download = DownloadUrlToFile(
 # Define a postgres table named `user_activity`. Use the connection url from dev_db
 user_activity_table = PostgresTable(
     name="user_activity",
-    db_conn_url=dev_db.get_connection_url_local(),
+    db_conn_url=dev_db.get_db_connection_url_local(),
 )
 # Create a Workflow to load the file downloaded above to the PostgresTable
 upload = UploadFileToSql(
@@ -40,7 +40,7 @@ upload = UploadFileToSql(
 # Step 3: Calculate daily active users and load to a postgres table
 daily_active_users_table = PostgresTable(
     name="daily_active_users",
-    db_conn_url=dev_db.get_connection_url_local(),
+    db_conn_url=dev_db.get_db_connection_url_local(),
 )
 load_dau = RunSqlQuery(
     query=f"""

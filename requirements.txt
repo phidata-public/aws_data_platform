@@ -79,9 +79,9 @@ packaging==21.3
     # via matplotlib
 pandas==1.4.1
     # via data (setup.py)
-phicli==0.1.8
+phicli==0.1.9
     # via phidata
-phidata==0.1.8
+phidata==0.1.9
     # via data (setup.py)
 pillow==9.0.1
     # via matplotlib
