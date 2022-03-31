@@ -84,3 +84,4 @@ query = RunAthenaQuery(
 
 # Create a DataProduct for these tasks
 dau_aws = DataProduct(name="dau_aws", workflows=[download, upload, crawler, query])
+dag = dau_aws.create_airflow_dag()

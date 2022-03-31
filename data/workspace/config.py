@@ -4,12 +4,13 @@ from phidata.app.airflow import AirflowWebserver
 from phidata.app.databox import Databox
 from phidata.app.jupyter import Jupyter
 from phidata.app.devbox import Devbox, DevboxDevModeArgs
-from phidata.app.postgres import PostgresDb
+from phidata.app.postgres import PostgresDb, PostgresVolumeType
 from phidata.app.traefik import IngressRoute, LoadBalancerProvider
 from phidata.infra.aws.config import AwsConfig
 from phidata.infra.aws.create.iam.role import create_glue_iam_role
 from phidata.infra.aws.resource.acm.certificate import AcmCertificate
 from phidata.infra.aws.resource.cloudformation import CloudFormationStack
+from phidata.infra.aws.resource.ec2.volume import EbsVolume
 from phidata.infra.aws.resource.eks.cluster import EksCluster
 from phidata.infra.aws.resource.eks.node_group import EksNodeGroup
 from phidata.infra.aws.resource.group import AwsResourceGroup
@@ -104,6 +105,8 @@ dev_docker_config = DockerConfig(
 
 ws_name = "aws-data-platform"
 domain = "awsdataplatform.com"
+aws_az = "us-east-1a"
+aws_region = "us-east-1"
 ws_dir_path = Path(__file__).parent.resolve()
 
 # S3 bucket for storing data
@@ -111,23 +114,30 @@ data_s3_bucket = S3Bucket(
     name=f"phi-{ws_name}",
     acl="private",
 )
+# EbsVolume for postgres data
+prd_db_volume = EbsVolume(
+    name="prd-db-volume",
+    size=1,
+    availability_zone=aws_az,
+)
 # Iam Role for Glue crawlers
 glue_iam_role = create_glue_iam_role(
     name=f"glue-crawler-role",
     s3_buckets=[data_s3_bucket],
+    skip_delete=True,
 )
 # EKS cluster + nodegroup + vpc stack
 data_vpc_stack = CloudFormationStack(
-    name=f"{ws_name}-vpc",
+    name=f"{ws_name}-vpc-1",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
-    # skip_delete=True,
+    skip_delete=True,
 )
 data_eks_cluster = EksCluster(
     name=f"{ws_name}-cluster",
     vpc_stack=data_vpc_stack,
-    # skip_delete=True,
+    skip_delete=True,
 )
 data_eks_nodegroup = EksNodeGroup(
     name=f"{ws_name}-ng",
@@ -156,6 +166,7 @@ acm_certificate = AcmCertificate(
 aws_resources = AwsResourceGroup(
     acm_certificates=[acm_certificate],
     s3_buckets=[data_s3_bucket],
+    volumes=[prd_db_volume],
     iam_roles=[glue_iam_role],
     cloudformation_stacks=[data_vpc_stack],
     eks_cluster=data_eks_cluster,
@@ -173,6 +184,9 @@ prd_db = PostgresDb(
     name="prd-db",
     db_user="prd",
     db_schema="prd",
+    volume_type=PostgresVolumeType.AWS_EBS,
+    ebs_volume=prd_db_volume,
+    ebs_volume_zone=aws_az,
     secrets_file=ws_dir_path.joinpath("secrets/prd_postgres_secrets.yml"),
 )
 prd_databox = Databox(
@@ -272,5 +286,5 @@ workspace = WorkspaceConfig(
     docker=[dev_docker_config],
     k8s=[prd_k8s_config],
     aws=[prd_aws_config],
-    aws_region="us-east-1",
+    aws_region=aws_region,
 )

@@ -58,3 +58,4 @@ load_dau = RunSqlQuery(
 
 # Create a DataProduct for these tasks
 dau = DataProduct(name="dau", workflows=[download, upload, load_dau])
+dag = dau.create_airflow_dag()
