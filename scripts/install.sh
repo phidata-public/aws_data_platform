@@ -38,7 +38,7 @@ update_python_deps() {
 
 install_workspace() {
   print_heading "Installing workspace $ROOT_DIR"
-  pip3 install --editable $ROOT_DIR
+  pip3 install --no-deps --editable $ROOT_DIR
 }
 
 main() {

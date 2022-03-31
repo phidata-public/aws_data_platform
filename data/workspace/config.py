@@ -132,12 +132,12 @@ data_vpc_stack = CloudFormationStack(
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
-    skip_delete=True,
+    # skip_delete=True,
 )
 data_eks_cluster = EksCluster(
     name=f"{ws_name}-cluster",
     vpc_stack=data_vpc_stack,
-    skip_delete=True,
+    # skip_delete=True,
 )
 data_eks_nodegroup = EksNodeGroup(
     name=f"{ws_name}-ng",

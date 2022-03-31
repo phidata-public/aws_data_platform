@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 version = "0.1.0"
-phidata_version = "0.1.9"
+min_phidata_version = "0.1.9"
 
 setup(
     name="data",
@@ -13,7 +13,7 @@ setup(
     install_requires=[
         "matplotlib",
         "pandas",
-        f"phidata=={phidata_version}",
+        f"phidata>={min_phidata_version}",
         "psycopg2-binary",
         "sqlalchemy",
     ],
