@@ -1,9 +1,9 @@
 from pathlib import Path
 
-from phidata.app.airflow import AirflowWebserver
+from phidata.app.airflow import AirflowWebserver, AirflowScheduler
 from phidata.app.databox import Databox
 from phidata.app.jupyter import Jupyter
-from phidata.app.devbox import Devbox, DevboxDevModeArgs
+from phidata.app.devbox import Devbox
 from phidata.app.postgres import PostgresDb, PostgresVolumeType
 from phidata.app.traefik import IngressRoute, LoadBalancerProvider
 from phidata.infra.aws.config import AwsConfig
@@ -18,6 +18,7 @@ from phidata.infra.aws.resource.s3 import S3Bucket
 from phidata.infra.docker.config import DockerConfig
 from phidata.infra.k8s.config import K8sConfig
 from phidata.infra.k8s.create.core.v1.service import ServiceType
+from phidata.infra.k8s.enums.image_pull_policy import ImagePullPolicy
 from phidata.workspace import WorkspaceConfig
 
 from data.workspace.whoami import whoami_k8s_rg, whoami_service, whoami_port
@@ -37,6 +38,7 @@ dev_db = PostgresDb(
     container_host_port=5532,
 )
 devbox = Devbox(
+    init_airflow=True,
     # Mount Aws config on the container
     mount_aws_config=True,
     # Mount airflow home from container to host machine
@@ -44,17 +46,18 @@ devbox = Devbox(
     mount_airflow_home=False,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
-    # Init Airflow scheduler as a deamon process,
+    # Init Airflow scheduler as a daemon process
     # init_airflow_scheduler=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     airflow_webserver_host_port=8280,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    dev_mode=DevboxDevModeArgs(),
+    install_phidata_dev=True,
     db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
 )
 dev_databox = Databox(
+    init_airflow=True,
     # Mount Aws config on the container
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
@@ -186,13 +189,16 @@ prd_db = PostgresDb(
     db_schema="prd",
     volume_type=PostgresVolumeType.AWS_EBS,
     ebs_volume=prd_db_volume,
-    ebs_volume_zone=aws_az,
     secrets_file=ws_dir_path.joinpath("secrets/prd_postgres_secrets.yml"),
 )
 prd_databox = Databox(
     env={"findme_key": "findme_value"},
     env_file=ws_dir_path.joinpath("env/databox_env.yml"),
     secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
+    init_airflow=True,
+    # Mount the workspace on the container using git-sync
+    git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
+    git_sync_branch="main",
     # Mount Aws config on the container
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
@@ -202,19 +208,27 @@ prd_databox = Databox(
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
+    image_pull_policy=ImagePullPolicy.ALWAYS,
 )
 prd_airflow_ws = AirflowWebserver(
     env={"findme_key": "findme_value"},
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
-    # Mount Aws config on the container
-    mount_aws_config=True,
-    init_airflow_db=True,
-    wait_for_db=True,
+    # Mount the workspace on the container using git-sync
+    git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
+    git_sync_branch="main",
+    # init_airflow_db=True,
     db_app=prd_db,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
+    db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
+)
+prd_airflow_scheduler = AirflowScheduler(
+    # Mount the workspace on the container using git-sync
+    git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
+    git_sync_branch="main",
+    db_app=prd_db,
     db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
 )
 jupyter = Jupyter(enabled=False)
@@ -273,7 +287,14 @@ traefik_ingress_route = IngressRoute(
 
 prd_k8s_config = K8sConfig(
     env="prd",
-    apps=[prd_db, prd_databox, prd_airflow_ws, jupyter, traefik_ingress_route],
+    apps=[
+        prd_db,
+        prd_databox,
+        prd_airflow_ws,
+        prd_airflow_scheduler,
+        jupyter,
+        traefik_ingress_route,
+    ],
     create_resources=[whoami_k8s_rg],
     eks_cluster=data_eks_cluster,
 )

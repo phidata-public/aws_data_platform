@@ -6,11 +6,11 @@
 #
 anyio==3.5.0
     # via httpcore
-boto3==1.21.30
+boto3==1.21.31
     # via
     #   phicli
     #   phidata
-botocore==1.24.30
+botocore==1.24.31
     # via
     #   boto3
     #   s3transfer
@@ -79,9 +79,9 @@ packaging==21.3
     # via matplotlib
 pandas==1.4.1
     # via data (setup.py)
-phicli==0.1.9
+phicli==0.1.10
     # via phidata
-phidata==0.1.9
+phidata==0.1.10
     # via data (setup.py)
 pillow==9.0.1
     # via matplotlib
@@ -145,7 +145,7 @@ sniffio==1.2.0
     #   anyio
     #   httpcore
     #   httpx
-sqlalchemy==1.4.32
+sqlalchemy==1.4.34
     # via data (setup.py)
 typer==0.4.1
     # via phicli
