@@ -122,12 +122,13 @@ prd_db_volume = EbsVolume(
     name="prd-db-volume",
     size=1,
     availability_zone=aws_az,
+    skip_delete=True,
 )
 # Iam Role for Glue crawlers
 glue_iam_role = create_glue_iam_role(
     name=f"glue-crawler-role",
     s3_buckets=[data_s3_bucket],
-    skip_delete=True,
+    # skip_delete=True,
 )
 # EKS cluster + nodegroup + vpc stack
 data_vpc_stack = CloudFormationStack(
@@ -211,6 +212,7 @@ prd_databox = Databox(
     image_pull_policy=ImagePullPolicy.ALWAYS,
 )
 prd_airflow_ws = AirflowWebserver(
+    init_airflow_db=True,
     env={"findme_key": "findme_value"},
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
     # Mount the workspace on the container using git-sync
