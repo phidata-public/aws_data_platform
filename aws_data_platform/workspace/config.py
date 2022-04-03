@@ -21,7 +21,11 @@ from phidata.infra.k8s.create.core.v1.service import ServiceType
 from phidata.infra.k8s.enums.image_pull_policy import ImagePullPolicy
 from phidata.workspace import WorkspaceConfig
 
-from data.workspace.whoami import whoami_k8s_rg, whoami_service, whoami_port
+from aws_data_platform.workspace.whoami import (
+    whoami_k8s_rg,
+    whoami_service,
+    whoami_port,
+)
 
 ######################################################
 ## Configure docker resources
@@ -37,6 +41,7 @@ dev_db = PostgresDb(
     # You can connect to this db on port 5532 (on the host machine)
     container_host_port=5532,
 )
+pg_db_connection_id = "pg_db"
 devbox = Devbox(
     init_airflow=True,
     # Mount Aws config on the container
@@ -54,7 +59,7 @@ devbox = Devbox(
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     install_phidata_dev=True,
-    db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
 dev_databox = Databox(
     init_airflow=True,
@@ -67,7 +72,7 @@ dev_databox = Databox(
     airflow_webserver_host_port=8180,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
 dev_airflow_ws = AirflowWebserver(
     # Mount Aws config on the container
@@ -79,7 +84,7 @@ dev_airflow_ws = AirflowWebserver(
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={dev_db.name: dev_db.get_db_connection_url_docker()},
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
 dev_docker_config = DockerConfig(
     apps=[dev_db, devbox, dev_databox, dev_airflow_ws],
@@ -208,7 +213,7 @@ prd_databox = Databox(
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
     image_pull_policy=ImagePullPolicy.ALWAYS,
 )
 prd_airflow_ws = AirflowWebserver(
@@ -224,14 +229,14 @@ prd_airflow_ws = AirflowWebserver(
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
-    db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 prd_airflow_scheduler = AirflowScheduler(
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
     db_app=prd_db,
-    db_connections={prd_db.name: prd_db.get_db_connection_url_k8s()},
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 jupyter = Jupyter(enabled=False)
 
@@ -305,6 +310,7 @@ prd_k8s_config = K8sConfig(
 ## Configure the workspace
 ######################################################
 workspace = WorkspaceConfig(
+    name="aws_data_platform",
     default_env="dev",
     docker=[dev_docker_config],
     k8s=[prd_k8s_config],

@@ -5,7 +5,7 @@ from phidata.workflow.run.sql.query import RunSqlQuery
 from phidata.workflow.upload.file.to_sql import UploadFileToSql
 from phidata.workflow.download.url.to_file import DownloadUrlToFile
 
-from data.workspace.config import dev_db
+from aws_data_platform.workspace.config import dev_db, pg_db_connection_id
 
 ##############################################################################
 ## This example shows how to build a data product that calculates
@@ -29,7 +29,7 @@ download = DownloadUrlToFile(
 # Define a postgres table named `user_activity`. Use the connection url from dev_db
 user_activity_table = PostgresTable(
     name="user_activity",
-    db_conn_id=dev_db.name,
+    db_conn_id=pg_db_connection_id,
     db_conn_url=dev_db.get_db_connection_url_local(),
 )
 # Create a Workflow to load the file downloaded above to the PostgresTable
@@ -41,7 +41,7 @@ upload = UploadFileToSql(
 # Step 3: Calculate daily active users and load to a postgres table
 daily_active_users_table = PostgresTable(
     name="daily_active_users",
-    db_conn_id=dev_db.name,
+    db_conn_id=pg_db_connection_id,
     db_conn_url=dev_db.get_db_connection_url_local(),
 )
 load_dau = RunSqlQuery(

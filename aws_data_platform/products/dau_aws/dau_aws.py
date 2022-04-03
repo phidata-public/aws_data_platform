@@ -8,7 +8,7 @@ from phidata.workflow.aws.glue.create_crawler import CreateGlueCrawler
 from phidata.workflow.upload.file.to_s3 import UploadFileToS3
 from phidata.workflow.download.url.to_file import DownloadUrlToFile
 
-from data.workspace.config import data_s3_bucket, glue_iam_role
+from aws_data_platform.workspace.config import data_s3_bucket, glue_iam_role
 
 ##############################################################################
 ## This example shows how to build a data pipeline that calculates

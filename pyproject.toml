@@ -13,5 +13,7 @@ module = [
     "airflow.*",
     "phidata",
     "phidata.*",
+    "setuptools",
+    "setuptools.*",
 ]
 ignore_missing_imports = true

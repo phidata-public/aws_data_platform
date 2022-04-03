@@ -1,10 +1,10 @@
 from setuptools import find_packages, setup
 
 version = "0.1.0"
-min_phidata_version = "0.1.11"
+min_phidata_version = "0.1.12"
 
 setup(
-    name="data",
+    name="aws_data_platform",
     version=version,
     author="Data Team",
     author_email="data@team.com",
@@ -12,9 +12,11 @@ setup(
     python_requires=">=3.7",
     install_requires=[
         "matplotlib",
-        "pandas",
-        f"phidata>={min_phidata_version}",
         "psycopg2-binary",
-        "sqlalchemy",
+        f"phidata>={min_phidata_version}",
+        # apache-airflow-providers-amazon 3.0.0 requires pandas<1.4,>=0.17.1
+        "pandas<1.4",
+        # apache-airflow 2.2.4 requires sqlalchemy<1.4.0,>=1.3.18
+        "sqlalchemy<1.4.0",
     ],
 )

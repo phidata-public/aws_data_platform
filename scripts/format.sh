@@ -10,7 +10,6 @@
 
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$( dirname $SCRIPTS_DIR )"
-DATA_DIR=$ROOT_DIR/data
 
 print_horizontal_line() {
   echo "------------------------------------------------------------"
@@ -23,10 +22,10 @@ print_heading() {
 }
 
 main() {
-  print_heading "Running: black $DATA_DIR"
-  black $DATA_DIR
-  print_heading "Running: mypy $DATA_DIR --config-file $ROOT_DIR/pyproject.toml"
-  mypy $DATA_DIR --config-file $ROOT_DIR/pyproject.toml
+  print_heading "Running: black $ROOT_DIR"
+  black $ROOT_DIR
+  print_heading "Running: mypy $ROOT_DIR --config-file $ROOT_DIR/pyproject.toml"
+  mypy $ROOT_DIR --config-file $ROOT_DIR/pyproject.toml
 }
 
 main "$@"
