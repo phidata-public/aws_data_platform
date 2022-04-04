@@ -51,6 +51,7 @@ dev_db = PostgresDb(
     container_host_port=5532,
 )
 pg_db_connection_id = "pg_db"
+dev_redis = Redis(command=["redis-server", "--save", "60", "1", "--loglevel", "debug"])
 devbox = Devbox(
     init_airflow=True,
     # Mount Aws config on the container
@@ -84,7 +85,6 @@ dev_databox = Databox(
     use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
-dev_redis = Redis(command=["redis-server", "--save", "60", "1", "--loglevel", "debug"])
 dev_airflow_ws = AirflowWebserver(
     # Mount Aws config on the container
     mount_aws_config=True,
@@ -95,6 +95,7 @@ dev_airflow_ws = AirflowWebserver(
     redis_app=dev_redis,
     executor="CeleryExecutor",
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/dev_airflow_secrets.yml"),
     # Creates an airflow user using details from the airflow_env.yaml
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
@@ -110,6 +111,7 @@ dev_airflow_scheduler = AirflowScheduler(
     redis_app=dev_redis,
     executor="CeleryExecutor",
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/dev_airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     container_host_port=8081,
@@ -117,7 +119,7 @@ dev_airflow_scheduler = AirflowScheduler(
 )
 dev_airflow_worker_1 = AirflowWorker(
     name="airflow-worker-1",
-    queue_name="queue_1",
+    queue_name="default,queue_1",
     # Mount Aws config on the container
     mount_aws_config=True,
     wait_for_db=True,
@@ -126,6 +128,7 @@ dev_airflow_worker_1 = AirflowWorker(
     redis_app=dev_redis,
     executor="CeleryExecutor",
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/dev_airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     container_host_port=8082,
@@ -133,7 +136,7 @@ dev_airflow_worker_1 = AirflowWorker(
 )
 dev_airflow_worker_2 = AirflowWorker(
     name="airflow-worker-2",
-    queue_name="queue_2",
+    queue_name="default,queue_2",
     # Mount Aws config on the container
     mount_aws_config=True,
     wait_for_db=True,
@@ -142,9 +145,11 @@ dev_airflow_worker_2 = AirflowWorker(
     redis_app=dev_redis,
     executor="CeleryExecutor",
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/dev_airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     container_host_port=8083,
+    worker_log_host_port=8794,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
 dev_airflow_flower = AirflowFlower(
@@ -156,6 +161,7 @@ dev_airflow_flower = AirflowFlower(
     redis_app=dev_redis,
     executor="CeleryExecutor",
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/dev_airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},

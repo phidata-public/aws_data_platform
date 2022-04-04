@@ -31,6 +31,7 @@ simple_dag = DAG(
 task_1 = BashOperator(
     task_id="print_date",
     bash_command="date",
+    dag=simple_dag,
 )
 
 task_2 = BashOperator(
@@ -38,6 +39,7 @@ task_2 = BashOperator(
     depends_on_past=False,
     bash_command="sleep 5",
     retries=3,
+    dag=simple_dag,
 )
 
 templated_command = dedent(
@@ -54,6 +56,7 @@ task_3 = BashOperator(
     depends_on_past=False,
     bash_command=templated_command,
     params={"my_param": "my_parameter"},
+    dag=simple_dag,
 )
 
 # define dependencies
