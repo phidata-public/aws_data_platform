@@ -6,11 +6,11 @@
 #
 anyio==3.5.0
     # via httpcore
-boto3==1.21.32
+boto3==1.21.33
     # via
     #   phicli
     #   phidata
-botocore==1.24.32
+botocore==1.24.33
     # via
     #   boto3
     #   s3transfer
@@ -79,9 +79,9 @@ packaging==21.3
     # via matplotlib
 pandas==1.3.5
     # via aws-data-platform (setup.py)
-phicli==0.1.14
+phicli==0.1.15
     # via phidata
-phidata==0.1.14
+phidata==0.1.15
     # via aws-data-platform (setup.py)
 pillow==9.1.0
     # via matplotlib
@@ -121,6 +121,7 @@ requests==2.27.1
     #   docker
     #   kubernetes
     #   requests-oauthlib
+    #   tiingo
 requests-oauthlib==1.3.1
     # via kubernetes
 rfc3986[idna2008]==1.5.0
@@ -146,6 +147,8 @@ sniffio==1.2.0
     #   httpcore
     #   httpx
 sqlalchemy==1.3.24
+    # via aws-data-platform (setup.py)
+tiingo==0.14.0
     # via aws-data-platform (setup.py)
 typer==0.4.1
     # via phicli

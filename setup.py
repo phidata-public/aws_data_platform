@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 version = "0.1.0"
-min_phidata_version = "0.1.14"
+min_phidata_version = "0.1.15"
 
 setup(
     name="aws_data_platform",
@@ -18,5 +18,6 @@ setup(
         "pandas<1.4",
         # apache-airflow 2.2.4 requires sqlalchemy<1.4.0,>=1.3.18
         "sqlalchemy<1.4.0",
+        "tiingo",
     ],
 )

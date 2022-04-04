@@ -33,7 +33,6 @@ from aws_data_platform.workspace.whoami import (
     whoami_port,
 )
 
-ws_name = "aws_data_platform"
 ws_dir_path = Path(__file__).parent.resolve()
 
 ######################################################
@@ -76,7 +75,7 @@ dev_databox = Databox(
     init_airflow_webserver=True,
     # Init Airflow scheduler as a daemon process,
     init_airflow_scheduler=True,
-    # Creates an airflow user with username: test, pass: test,
+    # Creates an airflow user using details from env/databox_env.yml
     create_airflow_test_user=True,
     airflow_webserver_host_port=8180,
     env_file=ws_dir_path.joinpath("env/databox_env.yml"),
@@ -201,13 +200,14 @@ dev_docker_config = DockerConfig(
 ## AWS Infrastructure
 ######################################################
 
+ws_key = "aws-data-platform"
 domain = "awsdataplatform.com"
 aws_az = "us-east-1a"
 aws_region = "us-east-1"
 
 # S3 bucket for storing data
 data_s3_bucket = S3Bucket(
-    name=f"phi_{ws_name}",
+    name=f"phi-{ws_key}",
     acl="private",
 )
 # EbsVolume for postgres data
@@ -232,19 +232,19 @@ glue_iam_role = create_glue_iam_role(
 )
 # EKS cluster + nodegroup + vpc stack
 data_vpc_stack = CloudFormationStack(
-    name=f"{ws_name}_vpc_1",
+    name=f"{ws_key}-vpc",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
     # skip_delete=True,
 )
 data_eks_cluster = EksCluster(
-    name=f"{ws_name}_cluster",
+    name=f"{ws_key}-cluster",
     vpc_stack=data_vpc_stack,
     # skip_delete=True,
 )
 data_eks_nodegroup = EksNodeGroup(
-    name=f"{ws_name}_ng",
+    name=f"{ws_key}-ng",
     eks_cluster=data_eks_cluster,
     min_size=2,
     max_size=5,
@@ -270,7 +270,7 @@ acm_certificate = AcmCertificate(
 aws_resources = AwsResourceGroup(
     acm_certificates=[acm_certificate],
     s3_buckets=[data_s3_bucket],
-    volumes=[prd_db_volume],
+    volumes=[prd_db_volume, prd_redis_volume],
     iam_roles=[glue_iam_role],
     cloudformation_stacks=[data_vpc_stack],
     eks_cluster=data_eks_cluster,
@@ -299,9 +299,6 @@ prd_redis = Redis(
     command=["redis-server", "--save", "60", "1", "--loglevel", "debug"],
 )
 prd_databox = Databox(
-    env={"findme_key": "findme_value"},
-    env_file=ws_dir_path.joinpath("env/databox_env.yml"),
-    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
     init_airflow=True,
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
@@ -310,8 +307,12 @@ prd_databox = Databox(
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
-    # Creates an airflow user with username: test, pass: test,
+    # Init Airflow scheduler as a daemon process,
+    init_airflow_scheduler=True,
+    # Creates an airflow user using details from env/databox_env.yml
     create_airflow_test_user=True,
+    env_file=ws_dir_path.joinpath("env/databox_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
@@ -319,9 +320,8 @@ prd_databox = Databox(
 )
 prd_airflow_ws = AirflowWebserver(
     init_airflow_db=True,
-    env={"findme_key": "findme_value"},
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
-    executor="CeleryExecutor",
+    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
@@ -330,13 +330,15 @@ prd_airflow_ws = AirflowWebserver(
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
     wait_for_db=True,
     wait_for_redis=True,
+    executor="CeleryExecutor",
     # Creates an airflow user using details from the airflow_env.yaml
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     # use_cache=False,
 )
 prd_airflow_scheduler = AirflowScheduler(
-    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
@@ -345,13 +347,14 @@ prd_airflow_scheduler = AirflowScheduler(
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
     wait_for_db=True,
     wait_for_redis=True,
-    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    executor="CeleryExecutor",
 )
 prd_airflow_worker_1 = AirflowWorker(
     name="airflow-worker-1",
-    queue_name="queue_1",
+    queue_name="default,queue_1",
     replicas=2,
-    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
@@ -360,13 +363,14 @@ prd_airflow_worker_1 = AirflowWorker(
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
     wait_for_db=True,
     wait_for_redis=True,
-    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    executor="CeleryExecutor",
 )
 prd_airflow_worker_2 = AirflowWorker(
     name="airflow-worker-2",
-    queue_name="queue_2",
+    queue_name="default,queue_2",
     replicas=2,
-    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
@@ -375,10 +379,11 @@ prd_airflow_worker_2 = AirflowWorker(
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
     wait_for_db=True,
     wait_for_redis=True,
-    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    executor="CeleryExecutor",
 )
 prd_airflow_flower = AirflowFlower(
-    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
@@ -387,7 +392,7 @@ prd_airflow_flower = AirflowFlower(
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
     wait_for_db=True,
     wait_for_redis=True,
-    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    executor="CeleryExecutor",
 )
 jupyter = Jupyter(enabled=False)
 
@@ -457,6 +462,7 @@ prd_k8s_config = K8sConfig(
     env="prd",
     apps=[
         prd_db,
+        prd_redis,
         prd_databox,
         prd_airflow_ws,
         prd_airflow_scheduler,
@@ -474,10 +480,12 @@ prd_k8s_config = K8sConfig(
 ## Configure the workspace
 ######################################################
 workspace = WorkspaceConfig(
-    name="aws_data_platform",
     default_env="dev",
     docker=[dev_docker_config],
     k8s=[prd_k8s_config],
     aws=[prd_aws_config],
     aws_region=aws_region,
+    # path to source code, this should be updated
+    # if the directory containing the products dir is renamed
+    src_dir="aws_data_platform",
 )
