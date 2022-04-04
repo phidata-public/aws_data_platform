@@ -4,7 +4,7 @@ version = "0.1.0"
 min_phidata_version = "0.1.15"
 
 setup(
-    name="aws_data_platform",
+    name="data",
     version=version,
     author="Data Team",
     author_email="data@team.com",
