@@ -1,7 +1,7 @@
 from setuptools import find_packages, setup
 
 version = "0.1.0"
-min_phidata_version = "0.1.12"
+min_phidata_version = "0.1.13"
 
 setup(
     name="aws_data_platform",

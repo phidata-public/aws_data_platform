@@ -1,10 +1,16 @@
 from pathlib import Path
 
-from phidata.app.airflow import AirflowWebserver, AirflowScheduler
+from phidata.app.airflow import (
+    AirflowWebserver,
+    AirflowScheduler,
+    AirflowWorker,
+    AirflowFlower,
+)
 from phidata.app.databox import Databox
 from phidata.app.jupyter import Jupyter
 from phidata.app.devbox import Devbox
 from phidata.app.postgres import PostgresDb, PostgresVolumeType
+from phidata.app.redis import Redis, RedisVolumeType
 from phidata.app.traefik import IngressRoute, LoadBalancerProvider
 from phidata.infra.aws.config import AwsConfig
 from phidata.infra.aws.create.iam.role import create_glue_iam_role
@@ -27,6 +33,9 @@ from aws_data_platform.workspace.whoami import (
     whoami_port,
 )
 
+ws_name = "aws_data_platform"
+ws_dir_path = Path(__file__).parent.resolve()
+
 ######################################################
 ## Configure docker resources
 ## Applications:
@@ -46,13 +55,10 @@ devbox = Devbox(
     init_airflow=True,
     # Mount Aws config on the container
     mount_aws_config=True,
-    # Mount airflow home from container to host machine
-    # useful when debugging the airflow conf
-    mount_airflow_home=False,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
     # Init Airflow scheduler as a daemon process
-    # init_airflow_scheduler=True,
+    init_airflow_scheduler=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     airflow_webserver_host_port=8280,
@@ -67,27 +73,105 @@ dev_databox = Databox(
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
+    # Init Airflow scheduler as a daemon process,
+    init_airflow_scheduler=True,
     # Creates an airflow user with username: test, pass: test,
     create_airflow_test_user=True,
     airflow_webserver_host_port=8180,
+    env_file=ws_dir_path.joinpath("env/databox_env.yml"),
+    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
+dev_redis = Redis(command=["redis-server", "--save", "60", "1", "--loglevel", "debug"])
 dev_airflow_ws = AirflowWebserver(
     # Mount Aws config on the container
     mount_aws_config=True,
     init_airflow_db=True,
     wait_for_db=True,
+    wait_for_redis=True,
     db_app=dev_db,
-    # Creates an airflow user with username: test, pass: test,
+    redis_app=dev_redis,
+    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    # Creates an airflow user using details from the airflow_env.yaml
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
+dev_airflow_scheduler = AirflowScheduler(
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    wait_for_db=True,
+    wait_for_redis=True,
+    db_app=dev_db,
+    redis_app=dev_redis,
+    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    container_host_port=8081,
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
+)
+dev_airflow_worker_1 = AirflowWorker(
+    name="airflow-worker-1",
+    queue_name="queue_1",
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    wait_for_db=True,
+    wait_for_redis=True,
+    db_app=dev_db,
+    redis_app=dev_redis,
+    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    container_host_port=8082,
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
+)
+dev_airflow_worker_2 = AirflowWorker(
+    name="airflow-worker-2",
+    queue_name="queue_2",
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    wait_for_db=True,
+    wait_for_redis=True,
+    db_app=dev_db,
+    redis_app=dev_redis,
+    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    container_host_port=8083,
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
+)
+dev_airflow_flower = AirflowFlower(
+    # Mount Aws config on the container
+    mount_aws_config=True,
+    wait_for_db=True,
+    wait_for_redis=True,
+    db_app=dev_db,
+    redis_app=dev_redis,
+    executor="CeleryExecutor",
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    # use_cache=False implies the container will be recreated every time you run `phi ws up`
+    use_cache=False,
+    db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
+)
 dev_docker_config = DockerConfig(
-    apps=[dev_db, devbox, dev_databox, dev_airflow_ws],
+    apps=[
+        dev_db,
+        dev_redis,
+        devbox,
+        dev_databox,
+        dev_airflow_ws,
+        dev_airflow_scheduler,
+        dev_airflow_worker_1,
+        dev_airflow_worker_2,
+        dev_airflow_flower,
+    ],
 )
 
 ######################################################
@@ -111,20 +195,25 @@ dev_docker_config = DockerConfig(
 ## AWS Infrastructure
 ######################################################
 
-ws_name = "aws-data-platform"
 domain = "awsdataplatform.com"
 aws_az = "us-east-1a"
 aws_region = "us-east-1"
-ws_dir_path = Path(__file__).parent.resolve()
 
 # S3 bucket for storing data
 data_s3_bucket = S3Bucket(
-    name=f"phi-{ws_name}",
+    name=f"phi_{ws_name}",
     acl="private",
 )
 # EbsVolume for postgres data
 prd_db_volume = EbsVolume(
     name="prd-db-volume",
+    size=1,
+    availability_zone=aws_az,
+    skip_delete=True,
+)
+# EbsVolume for redis
+prd_redis_volume = EbsVolume(
+    name="prd-redis-volume",
     size=1,
     availability_zone=aws_az,
     skip_delete=True,
@@ -137,19 +226,19 @@ glue_iam_role = create_glue_iam_role(
 )
 # EKS cluster + nodegroup + vpc stack
 data_vpc_stack = CloudFormationStack(
-    name=f"{ws_name}-vpc-1",
+    name=f"{ws_name}_vpc_1",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
     # skip_delete=True,
 )
 data_eks_cluster = EksCluster(
-    name=f"{ws_name}-cluster",
+    name=f"{ws_name}_cluster",
     vpc_stack=data_vpc_stack,
     # skip_delete=True,
 )
 data_eks_nodegroup = EksNodeGroup(
-    name=f"{ws_name}-ng",
+    name=f"{ws_name}_ng",
     eks_cluster=data_eks_cluster,
     min_size=2,
     max_size=5,
@@ -197,6 +286,12 @@ prd_db = PostgresDb(
     ebs_volume=prd_db_volume,
     secrets_file=ws_dir_path.joinpath("secrets/prd_postgres_secrets.yml"),
 )
+prd_redis = Redis(
+    name="prd-redis",
+    volume_type=RedisVolumeType.AWS_EBS,
+    ebs_volume=prd_redis_volume,
+    command=["redis-server", "--save", "60", "1", "--loglevel", "debug"],
+)
 prd_databox = Databox(
     env={"findme_key": "findme_value"},
     env_file=ws_dir_path.joinpath("env/databox_env.yml"),
@@ -220,23 +315,73 @@ prd_airflow_ws = AirflowWebserver(
     init_airflow_db=True,
     env={"findme_key": "findme_value"},
     env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+    executor="CeleryExecutor",
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
-    # init_airflow_db=True,
     db_app=prd_db,
-    # Creates an airflow user with username: test, pass: test,
+    redis_app=prd_redis,
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
+    wait_for_db=True,
+    wait_for_redis=True,
+    # Creates an airflow user using details from the airflow_env.yaml
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
-    use_cache=False,
-    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
+    # use_cache=False,
 )
 prd_airflow_scheduler = AirflowScheduler(
+    executor="CeleryExecutor",
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
     db_app=prd_db,
+    redis_app=prd_redis,
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
+    wait_for_db=True,
+    wait_for_redis=True,
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+)
+prd_airflow_worker_1 = AirflowWorker(
+    name="airflow-worker-1",
+    queue_name="queue_1",
+    replicas=2,
+    executor="CeleryExecutor",
+    # Mount the workspace on the container using git-sync
+    git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
+    git_sync_branch="main",
+    db_app=prd_db,
+    redis_app=prd_redis,
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
+    wait_for_db=True,
+    wait_for_redis=True,
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+)
+prd_airflow_worker_2 = AirflowWorker(
+    name="airflow-worker-2",
+    queue_name="queue_2",
+    replicas=2,
+    executor="CeleryExecutor",
+    # Mount the workspace on the container using git-sync
+    git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
+    git_sync_branch="main",
+    db_app=prd_db,
+    redis_app=prd_redis,
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
+    wait_for_db=True,
+    wait_for_redis=True,
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
+)
+prd_airflow_flower = AirflowFlower(
+    executor="CeleryExecutor",
+    # Mount the workspace on the container using git-sync
+    git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
+    git_sync_branch="main",
+    db_app=prd_db,
+    redis_app=prd_redis,
+    db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
+    wait_for_db=True,
+    wait_for_redis=True,
+    env_file=ws_dir_path.joinpath("env/airflow_env.yml"),
 )
 jupyter = Jupyter(enabled=False)
 
@@ -259,6 +404,16 @@ routes = [
             {
                 "name": prd_airflow_ws.get_service_name(),
                 "port": prd_airflow_ws.get_service_port(),
+            }
+        ],
+    },
+    {
+        "match": f"Host(`flower.airflow.{domain}`)",
+        "kind": "Rule",
+        "services": [
+            {
+                "name": prd_airflow_flower.get_service_name(),
+                "port": prd_airflow_flower.get_service_port(),
             }
         ],
     },
@@ -299,6 +454,9 @@ prd_k8s_config = K8sConfig(
         prd_databox,
         prd_airflow_ws,
         prd_airflow_scheduler,
+        prd_airflow_worker_1,
+        prd_airflow_worker_2,
+        prd_airflow_flower,
         jupyter,
         traefik_ingress_route,
     ],
