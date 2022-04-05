@@ -68,7 +68,7 @@ kubernetes==23.3.0
     #   phicli
     #   phidata
 matplotlib==3.5.1
-    # via aws-data-platform (setup.py)
+    # via data (setup.py)
 numpy==1.22.3
     # via
     #   matplotlib
@@ -78,15 +78,15 @@ oauthlib==3.2.0
 packaging==21.3
     # via matplotlib
 pandas==1.3.5
-    # via aws-data-platform (setup.py)
-phicli==0.1.15
+    # via data (setup.py)
+phicli==0.1.16
     # via phidata
-phidata==0.1.15
-    # via aws-data-platform (setup.py)
+phidata==0.1.16
+    # via data (setup.py)
 pillow==9.1.0
     # via matplotlib
 psycopg2-binary==2.9.3
-    # via aws-data-platform (setup.py)
+    # via data (setup.py)
 pyasn1==0.4.8
     # via
     #   pyasn1-modules
@@ -147,9 +147,9 @@ sniffio==1.2.0
     #   httpcore
     #   httpx
 sqlalchemy==1.3.24
-    # via aws-data-platform (setup.py)
+    # via data (setup.py)
 tiingo==0.14.0
-    # via aws-data-platform (setup.py)
+    # via data (setup.py)
 typer==0.4.1
     # via phicli
 types-pyyaml==6.0.5
