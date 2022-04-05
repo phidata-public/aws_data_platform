@@ -12,10 +12,9 @@ from aws_data_platform.workspace.config import dev_db, pg_db_connection_id
 ## This data product download daily stock price data using the Tiingo Api
 ## Steps:
 ##  1. Get tickers
-##  2. Get prices for each ticker
+##  2. Get prices for NASDAQ tickers
 ##############################################################################
 
-# Step 1: Get tickers
 # Define a postgres table named `tickers`.
 # For local runs, use the connection url from dev_db. For dev/prd use the pg_db_connection_id
 tickers_table = PostgresTable(
@@ -32,15 +31,14 @@ def load_tickers_table(sql_table: PostgresTable, api_key: Optional[str] = None, 
     import pandas as pd
     from tiingo import TiingoClient
 
-    logger.info(f"sql_table: {sql_table}")
-    logger.info(f"api_key: {api_key}")
-    logger.info(f"kwargs: {kwargs}")
+    logger.debug(f"sql_table: {sql_table}")
+    logger.debug(f"api_key: {api_key}")
 
     # Build tiingo_config
     tiingo_config: Dict[str, Any] = {
         "session": True,
     }
-    # Set TIINGO_API_KEY as an env variable since this key should not be checked in
+    # You should set TIINGO_API_KEY as an env variable because this key should not be checked in
     # But for local testing, we can pass the api_key to this function
     if api_key is not None:
         tiingo_config["api_key"] = api_key
@@ -50,8 +48,8 @@ def load_tickers_table(sql_table: PostgresTable, api_key: Optional[str] = None, 
 
     tickers_df = tiingo_client.list_tickers(assetTypes=["Stock", "ETF", "Mutual Fund"])
     list_tickers_response = tiingo_client.list_stock_tickers()
-    logger.info("list_tickers_response type: {}".format(type(list_tickers_response)))
-    logger.info(f"list_tickers_response:\n{list_tickers_response[:5]}")
+    # logger.info("list_tickers_response type: {}".format(type(list_tickers_response)))
+    # logger.info(f"list_tickers_response:\n{list_tickers_response[:5]}")
 
     tickers_df = pd.DataFrame(list_tickers_response)
     tickers_df.rename(
@@ -63,21 +61,13 @@ def load_tickers_table(sql_table: PostgresTable, api_key: Optional[str] = None, 
         },
         inplace=True,
     )
-    logger.info("tickers_df:")
-    logger.info(tickers_df[:5])
+    logger.info("Sample tickers data:")
     logger.info("# tickers: {}".format(len(tickers_df)))
+    logger.info(tickers_df[:5])
 
     return sql_table.write_pandas_df(tickers_df)
 
 
-# Instantiate the Workflow that load the tickers table
-load_tickers = load_tickers_table(
-    tickers_table,
-    "44178418bad2c63d651cd99d1354e194548e3fa2",
-)
-
-
-# Step 2: Get prices for each ticker
 # Define a postgres table named `prices`.
 prices_table = PostgresTable(
     name="prices",
@@ -86,13 +76,17 @@ prices_table = PostgresTable(
 )
 
 
-# To demo how we can add input validation for workflows
+# Adding run-time type validation using pydantic
 # Create a pydantic model containing the workflow args
 class LoadTickerPricesArgs(PythonWorkflowArgs):
-    # required: ticker or a list of tickers
-    tickers: Union[str, List[str]]
-    # required: PostgresTable to load
-    sql_table: PostgresTable
+    # required: prices_table to load
+    prices_table: PostgresTable
+    # provide tickers here as a str or list
+    # If None, scan the tickers_table
+    tickers: Optional[Union[str, List[str]]] = None
+    tickers_table: Optional[PostgresTable] = None
+    asset_types: List[str] = ["Stock", "ETF", "Mutual Fund"]
+    exchange_list: List[str] = ["NASDAQ"]
     # start_date: Start of ticker range in YYYY-MM-DD format.
     start_date: Optional[str] = None
     # end_date: End of ticker range in YYYY-MM-DD format.
@@ -106,7 +100,7 @@ class LoadTickerPricesArgs(PythonWorkflowArgs):
     sort: Optional[str] = None
     columns: Optional[List[str]] = None
     use_session: bool = True
-    # Set TIINGO_API_KEY as an env variable since this key should not be checked in
+    # You should set TIINGO_API_KEY as an env variable because this key should not be checked in
     # But for local testing, we can pass the api_key to this function
     api_key: Optional[str] = None
 
@@ -132,30 +126,34 @@ def load_ticker_prices(**kwargs) -> bool:
     # Build TiingoClient
     tiingo_client: TiingoClient = TiingoClient(tiingo_config)
 
-    tickers = args.tickers
     ticker_price_df = pd.DataFrame()
-    if isinstance(tickers, list):
-        for ticker in tickers:
-            _price_df: pd.DataFrame = tiingo_client.get_dataframe(
-                tickers=ticker,
-                startDate=args.start_date,
-                endDate=args.end_date,
-                frequency=args.frequency,
-                fmt=args.response_format,
-            )
-            logger.info("_price_df:")
-            logger.info(_price_df[:5])
-            _price_df["ticker"] = ticker
-            ticker_price_df = ticker_price_df.append(_price_df)
+    if args.tickers is not None:
+        tickers = args.tickers
+        # if isinstance(tickers, list):
+        #     for ticker in tickers:
+        #         _price_df: pd.DataFrame = tiingo_client.get_dataframe(
+        #             tickers=ticker,
+        #             startDate=args.start_date,
+        #             endDate=args.end_date,
+        #             frequency=args.frequency,
+        #             fmt=args.response_format,
+        #         )
+        #         logger.info("_price_df:")
+        #         logger.info(_price_df[:5])
+        #         _price_df["ticker"] = ticker
+        #         ticker_price_df = ticker_price_df.append(_price_df)
+        # else:
+        #     ticker_price_df = tiingo_client.get_dataframe(
+        #         tickers=tickers,
+        #         startDate=args.start_date,
+        #         endDate=args.end_date,
+        #         frequency=args.frequency,
+        #         fmt=args.response_format,
+        #     )
+        #     ticker_price_df["ticker"] = args.tickers
     else:
-        ticker_price_df = tiingo_client.get_dataframe(
-            tickers=tickers,
-            startDate=args.start_date,
-            endDate=args.end_date,
-            frequency=args.frequency,
-            fmt=args.response_format,
-        )
-        ticker_price_df["ticker"] = args.tickers
+        # read tickers_table
+        pass
 
     ticker_price_df.reset_index(inplace=True)
     ticker_price_df.set_index(["date", "ticker"], inplace=True)
@@ -166,12 +164,13 @@ def load_ticker_prices(**kwargs) -> bool:
     return args.sql_table.write_pandas_df(ticker_price_df)
 
 
-# Instantiate the Workflow that loads the prices table
+# Step 1: Get tickers
 load_prices = load_ticker_prices(
     tickers="GOOG",
     sql_table=prices_table,
-    api_key="44178418bad2c63d651cd99d1354e194548e3fa2",
 )
+# Step 2: Get prices for each ticker
+load_tickers = load_tickers_table(tickers_table)
 
 # Create a DataProduct for these tasks
 tiingo = DataProduct(name="tiingo", workflows=[load_tickers, load_prices])
