@@ -36,6 +36,7 @@ user_activity_table = PostgresTable(
 upload = UploadFileToSql(
     file=user_activity_csv,
     sql_table=user_activity_table,
+    if_exists="replace",
 )
 
 # Step 3: Calculate daily active users and load to a postgres table
@@ -56,6 +57,7 @@ load_dau = RunSqlQuery(
     sql_table=user_activity_table,
     show_sample_data=True,
     load_result_to=daily_active_users_table,
+    if_exists="replace",
 )
 
 # Create a DataProduct for these tasks
