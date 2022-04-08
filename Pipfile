@@ -1,0 +1,21 @@
+[[source]]
+name = "pypi"
+url = "https://pypi.org/simple"
+verify_ssl = true
+
+[dev-packages]
+workspace = {editable = true, path = "."}
+
+[packages]
+apache-airflow = {version = "==2.2.5", extras = ["amazon", "postgres"]}
+boto3 = "*"
+black = "*"
+matplotlib = "*"
+numpy = "*"
+pandas = "<1.4"
+phidata = ">=0.1.17"
+psycopg2-binary = "*"
+pytest = "*"
+pytz = "*"
+sqlalchemy = "<1.4.0"
+tiingo = "*"
