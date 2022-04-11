@@ -8,11 +8,10 @@ from phidata.workflow.aws.glue.create_crawler import CreateGlueCrawler
 from phidata.workflow.upload.file.to_s3 import UploadFileToS3
 from phidata.workflow.download.url.to_file import DownloadUrlToFile
 
-from aws_data_platform.workspace.config import data_s3_bucket, glue_iam_role
+from workspace.config import data_s3_bucket, glue_iam_role
 
 ##############################################################################
-## This example shows how to build a data pipeline that calculates
-## daily user count using s3, athena and glue.
+## An example data pipeline that calculates daily user count using s3, athena and glue.
 ## Steps:
 ##  1. Download user_activity data from a URL.
 ##  2. Upload user_activity data to a S3 bucket.
@@ -21,7 +20,7 @@ from aws_data_platform.workspace.config import data_s3_bucket, glue_iam_role
 ##############################################################################
 
 # Step 1: Download user_activity data from a URL.
-# Define a File object which points to $WORKSPACE_DIR/storage/dau_aws/user_activity.csv
+# Define a File object which points to $WORKSPACE_ROOT/storage/dau_aws/user_activity.csv
 user_activity_csv = File(name="user_activity.csv", file_dir="dau_aws")
 # Create a Workflow to download the user_activity data from a URL
 download = DownloadUrlToFile(
@@ -83,5 +82,13 @@ query = RunAthenaQuery(
 )
 
 # Create a DataProduct for these tasks
-dau_aws = DataProduct(name="dau_aws", workflows=[download, upload, crawler, query])
+dau_aws = DataProduct(
+    name="dau_aws",
+    workflows=[
+        download,
+        upload,
+        crawler,
+        # query,
+    ]
+)
 dag = dau_aws.create_airflow_dag()

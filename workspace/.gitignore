@@ -1,0 +1,24 @@
+# Sensitive AWS Info
+# Ignore ACM certificate
+aws/acm
+
+# Sensitive K8s Info
+# k8s/prd may contain secrets which should not be checked in
+k8s/prd
+# ingore dev manifests
+k8s/dev
+# ingore stg manifests
+k8s/stg
+# ingore test manifests
+k8s/test
+
+# Ignore secrets
+secrets
+
+# Ignore env
+env
+
+# Ignore env variables passed to workflows
+local_env.py
+docker_env.py
+k8s_env.py

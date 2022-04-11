@@ -3,11 +3,9 @@ from typing import Optional, Dict, Any, List, Union
 from phidata.asset.table.sql.postgres import PostgresTable
 from phidata.product import DataProduct
 from phidata.workflow import create_workflow, PythonWorkflowArgs
-from phidata.workflow.run.sql.query import RunSqlQuery
 from phidata.utils.log import logger
 
-from aws_data_platform.products.utils.dttm import ds_str_to_dttm
-from aws_data_platform.workspace.config import dev_db, pg_db_connection_id
+from workspace import dev_db, pg_db_connection_id
 
 ##############################################################################
 ## This data product download daily stock price data using the Tiingo Api

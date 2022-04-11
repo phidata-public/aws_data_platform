@@ -2,12 +2,17 @@
 
 ############################################################################
 #
-# Install python dependencies
+# Install python dependencies. Please run this inside a virtual env
 # Usage:
-#   ./scripts/install.sh    : Install dependencies
-#   ./scripts/install.sh -u : Upgrade requirements.txt & Install dependencies
+# 1. Create + activate virtual env using:
+#     python3 -m venv ~/.venv/dataenv
+#     source ~/.venv/dataenv/bin/activate
+# 2. Install workspace and dependencies:
+#     ./scripts/install.sh    : Install dependencies
+#     ./scripts/install.sh -u : Upgrade requirements.txt & Install dependencies
 #
 ############################################################################
+
 SCRIPTS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$( dirname $SCRIPTS_DIR )"
 
@@ -33,19 +38,23 @@ main() {
 
   if [[ $UPDATE -eq 1 ]]; then
     print_status "Compiling requirements"
-    cd $ROOT_DIR
+    cd ${ROOT_DIR}
     CUSTOM_COMPILE_COMMAND="./scripts/install.sh -u" \
-    pip-compile --upgrade --pip-args "--no-cache-dir"
+      pip-compile --upgrade --pip-args "--no-cache-dir" \
+      ${ROOT_DIR}/pyproject.toml
     print_horizontal_line
   fi
 
-  print_status "Installing dependencies"
-  pip install -r $ROOT_DIR/requirements.txt --no-deps
+  print_status "Installing requirements.txt"
+  pip install -r ${ROOT_DIR}/requirements.txt --no-deps
   print_horizontal_line
 
-  print_status "Installing workspace $ROOT_DIR"
-  pip3 install --no-deps --editable $ROOT_DIR
+  print_status "Installing workspace ${ROOT_DIR} with [dev] extras"
+  pip3 install --editable "${ROOT_DIR}[dev]"
   print_horizontal_line
+
+  print_status "Installing airflow requirements without dependencies for code completion"
+  pip install -r ${ROOT_DIR}/airflow-requirements.txt --no-deps
 }
 
 main "$@"

@@ -1,1 +1,1 @@
-## Data workspace
+## A production grade data platform built on AWS

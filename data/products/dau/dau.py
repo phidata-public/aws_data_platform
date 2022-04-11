@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 from phidata.asset.file import File
 from phidata.asset.table.sql.postgres import PostgresTable
 from phidata.product import DataProduct
@@ -5,11 +7,10 @@ from phidata.workflow.run.sql.query import RunSqlQuery
 from phidata.workflow.upload.file.to_sql import UploadFileToSql
 from phidata.workflow.download.url.to_file import DownloadUrlToFile
 
-from aws_data_platform.workspace.config import dev_db, pg_db_connection_id
+from workspace.config import dev_db, pg_db_connection_id
 
 ##############################################################################
-## This example shows how to build a data product that calculates
-## daily active users using postgres.
+## An example data pipeline that calculates daily active users using postgres.
 ## Steps:
 ##  1. Download user_activity data from a URL.
 ##  2. Upload user_activity data to a postgres table
@@ -17,7 +18,7 @@ from aws_data_platform.workspace.config import dev_db, pg_db_connection_id
 ##############################################################################
 
 # Step 1: Download user_activity data from a URL.
-# Define a File object which points to $WORKSPACE_DIR/storage/dau/user_activity.csv
+# Define a File object which points to $WORKSPACE_ROOT/storage/dau/user_activity.csv
 user_activity_csv = File(name="user_activity.csv", file_dir="dau")
 # Create a Workflow to download the user_activity data from a URL
 download = DownloadUrlToFile(
@@ -62,4 +63,7 @@ load_dau = RunSqlQuery(
 
 # Create a DataProduct for these tasks
 dau = DataProduct(name="dau", workflows=[download, upload, load_dau])
-dag = dau.create_airflow_dag()
+dag = dau.create_airflow_dag(
+    schedule_interval=timedelta(days=1),
+    start_date="2022-04-08",
+)

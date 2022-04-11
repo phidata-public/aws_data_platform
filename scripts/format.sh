@@ -15,16 +15,16 @@ print_horizontal_line() {
   echo "------------------------------------------------------------"
 }
 
-print_heading() {
+print_status() {
   print_horizontal_line
   echo "--*--> $1"
   print_horizontal_line
 }
 
 main() {
-  print_heading "Running: black $ROOT_DIR"
+  print_status "Running: black $ROOT_DIR"
   black $ROOT_DIR
-  print_heading "Running: mypy $ROOT_DIR --config-file $ROOT_DIR/pyproject.toml"
+  print_status "Running: mypy $ROOT_DIR --config-file $ROOT_DIR/pyproject.toml"
   mypy $ROOT_DIR --config-file $ROOT_DIR/pyproject.toml
 }
 
