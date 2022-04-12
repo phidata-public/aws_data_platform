@@ -19,6 +19,7 @@ from phidata.infra.aws.resource.eks.cluster import EksCluster
 from phidata.infra.aws.resource.eks.node_group import EksNodeGroup
 from phidata.infra.aws.resource.group import AwsResourceGroup
 from phidata.infra.aws.resource.s3 import S3Bucket
+from phidata.infra.aws.resource.rds.db_cluster import DbCluster
 from phidata.infra.docker.config import DockerConfig
 from phidata.infra.docker.resource.image import DockerImage
 from phidata.infra.k8s.config import K8sConfig
@@ -26,7 +27,7 @@ from phidata.infra.k8s.create.core.v1.service import ServiceType
 from phidata.infra.k8s.enums.image_pull_policy import ImagePullPolicy
 from phidata.workspace import WorkspaceConfig
 
-from workspace.secrets import load_balancer_source_ranges
+from workspace.secrets import load_balancer_source_ranges, airflow_db_user, airflow_db_pass, airflow_db_schema
 from workspace.whoami import (
     whoami_k8s_rg,
     whoami_service,
@@ -90,15 +91,13 @@ dev_databox = Databox(
     mount_aws_config=True,
     # Init Airflow webserver when the container starts
     init_airflow_webserver=True,
-    # Init Airflow scheduler as a daemon process,
-    init_airflow_scheduler=True,
     # Creates an airflow user using details from env/databox_env.yml
     create_airflow_test_user=True,
     airflow_webserver_host_port=6180,
     env_file=ws_dir_path.joinpath("env/databox_env.yml"),
     secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
-    # use_cache=False,
+    use_cache=False,
     install_phidata_dev=True,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
 )
@@ -284,8 +283,7 @@ glue_iam_role = create_glue_iam_role(
     skip_delete=True,
 )
 
-## EKS clusters
-# EKS vpc stack
+# Vpc stack
 data_vpc_stack = CloudFormationStack(
     name=f"{ws_key}-vpc",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
@@ -293,6 +291,22 @@ data_vpc_stack = CloudFormationStack(
     # uncomment when workspace is production-ready
     skip_delete=True,
 )
+
+## Databases
+airflow_prd_db = DbCluster(
+    name="airflow-db",
+    engine="aurora-postgresql",
+    # db_instance_class="db.m6g.large",
+    availability_zones=[aws_az],
+    engine_version="12.7",
+    master_username=airflow_db_user,
+    master_user_password=airflow_db_pass,
+    database_name=airflow_db_schema,
+    vpc_stack=data_vpc_stack,
+    db_subnet_group_name="test-db-subnet",
+    storage_encrypted=True,
+)
+
 # EKS cluster
 data_eks_cluster = EksCluster(
     name=f"{ws_key}-cluster",
@@ -331,6 +345,7 @@ aws_resources = AwsResourceGroup(
     # acm_certificates=[acm_certificate],
     s3_buckets=[data_s3_bucket],
     volumes=[prd_db_volume, airflow_db_volume, prd_redis_volume],
+    dbs=[airflow_prd_db],
     iam_roles=[glue_iam_role],
     cloudformation_stacks=[data_vpc_stack],
     eks_cluster=data_eks_cluster,

@@ -195,9 +195,9 @@ load_tickers = load_tickers_table(tickers_table)
 # Step 2: Get prices for each ticker
 load_prices = load_ticker_prices(
     prices_table=prices_table,
-    # tickers=["GOOG", "AAPL"],
+    tickers=["GOOG", "AAPL"],
     tickers_table=tickers_table,
-    filter_exchanges=["NASDAQ"],
+    # filter_exchanges=["NASDAQ"],
     print_warning_on_no_data=False,
 )
 
