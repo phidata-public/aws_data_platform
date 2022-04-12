@@ -26,6 +26,7 @@ from phidata.infra.k8s.create.core.v1.service import ServiceType
 from phidata.infra.k8s.enums.image_pull_policy import ImagePullPolicy
 from phidata.workspace import WorkspaceConfig
 
+from workspace.secrets import load_balancer_source_ranges
 from workspace.whoami import (
     whoami_k8s_rg,
     whoami_service,
@@ -111,7 +112,7 @@ airflow_image = DockerImage(
     path=str(ws_dir_path.parent),
     dockerfile="workspace/airflow.Dockerfile",
     print_build_log=True,
-    # use_cache=False,
+    use_cache=False,
     push_image=True,
     # print_push_output=True,
 )
@@ -243,7 +244,7 @@ aws_region = "us-east-1"
 ## S3 buckets
 # S3 bucket for storing data
 data_s3_bucket = S3Bucket(
-    name=f"phi-{ws_key}",
+    name=f"phi-data-{ws_key}",
     acl="private",
 )
 # S3 bucket for storing load balancer logs
@@ -255,21 +256,21 @@ lb_s3_bucket = S3Bucket(
 ## EbsVolumes
 # EbsVolume for prd-db
 prd_db_volume = EbsVolume(
-    name="prd-db-{ws_key}",
+    name=f"prd-db-{ws_key}",
     size=32,
     availability_zone=aws_az,
     skip_delete=True,
 )
 # EbsVolume for airflow-db
 airflow_db_volume = EbsVolume(
-    name="airflow-db-{ws_key}",
+    name=f"airflow-db-{ws_key}",
     size=8,
     availability_zone=aws_az,
     skip_delete=True,
 )
 # EbsVolume for prd-redis
 prd_redis_volume = EbsVolume(
-    name="prd-redis-{ws_key}",
+    name=f"prd-redis-{ws_key}",
     size=1,
     availability_zone=aws_az,
     skip_delete=True,
@@ -329,7 +330,7 @@ aws_resources = AwsResourceGroup(
     # This certificate is already created so we comment it out
     # acm_certificates=[acm_certificate],
     s3_buckets=[data_s3_bucket],
-    volumes=[prd_db_volume, prd_redis_volume],
+    volumes=[prd_db_volume, airflow_db_volume, prd_redis_volume],
     iam_roles=[glue_iam_role],
     cloudformation_stacks=[data_vpc_stack],
     eks_cluster=data_eks_cluster,
@@ -525,6 +526,7 @@ traefik_ingress_route = IngressRoute(
     access_logs_to_s3=True,
     access_logs_s3_bucket=lb_s3_bucket.name,
     access_logs_s3_bucket_prefix="prd",
+    load_balancer_source_ranges=load_balancer_source_ranges,
     secrets_file=ws_dir_path.joinpath("secrets/taefik_secrets.yml"),
 )
 
@@ -553,5 +555,4 @@ workspace = WorkspaceConfig(
     docker=[dev_docker_config],
     k8s=[prd_k8s_config],
     aws=[prd_aws_config],
-    aws_region=aws_region,
 )

@@ -5,10 +5,10 @@ from phidata.product import DataProduct
 from phidata.workflow import create_workflow, PythonWorkflowArgs
 from phidata.utils.log import logger
 
-from workspace import dev_db, pg_db_connection_id
+from workspace.config import dev_db, pg_db_connection_id
 
 ##############################################################################
-## This data product download daily stock price data using the Tiingo Api
+## This data pipeline downloads daily stock price data using the Tiingo Api
 ## Steps:
 ##  1. Get tickers
 ##  2. Get prices for NASDAQ tickers
@@ -155,7 +155,7 @@ def load_ticker_prices(**kwargs) -> bool:
     if tickers_list is not None:
         for ticker in tickers_list:
             try:
-                logger.debug(f"Getting prices for {ticker}")
+                logger.info(f"Getting prices for {ticker}")
                 single_ticker_price = tiingo_client.get_dataframe(
                     tickers=ticker,
                     startDate=args.start_date,

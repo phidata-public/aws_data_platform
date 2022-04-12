@@ -46,7 +46,7 @@ upload = UploadFileToS3(
 database_name = "users"
 table_name = pipeline_name
 user_activity_crawler = GlueCrawler(
-    name=f"{pipeline_name}-crawler",
+    name=f"{pipeline_name}-crawler-2",
     iam_role=glue_iam_role,
     database_name=database_name,
     s3_targets=[
@@ -88,7 +88,6 @@ dau_aws = DataProduct(
         download,
         upload,
         crawler,
-        # query,
     ]
 )
 dag = dau_aws.create_airflow_dag()

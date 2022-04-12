@@ -32,19 +32,18 @@ echo_hostname_command = "echo $(hostname)"
 task_1 = BashOperator(
     task_id="task_1",
     bash_command=echo_hostname_command,
-    queue="queue_1",
     dag=distributed_dag,
 )
 task_2 = BashOperator(
     task_id="task_2",
     bash_command=echo_hostname_command,
-    queue="queue_2",
+    queue="high_pri",
     dag=distributed_dag,
 )
 task_3 = BashOperator(
     task_id="task_3",
     bash_command=echo_hostname_command,
-    queue="queue_2",
+    queue="high_pri",
     dag=distributed_dag,
 )
 

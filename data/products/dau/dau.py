@@ -1,5 +1,3 @@
-from datetime import datetime, timedelta
-
 from phidata.asset.file import File
 from phidata.asset.table.sql.postgres import PostgresTable
 from phidata.product import DataProduct
@@ -63,7 +61,4 @@ load_dau = RunSqlQuery(
 
 # Create a DataProduct for these tasks
 dau = DataProduct(name="dau", workflows=[download, upload, load_dau])
-dag = dau.create_airflow_dag(
-    schedule_interval=timedelta(days=1),
-    start_date="2022-04-08",
-)
+dag = dau.create_airflow_dag()
