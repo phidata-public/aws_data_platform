@@ -20,6 +20,7 @@ from phidata.infra.aws.resource.eks.node_group import EksNodeGroup
 from phidata.infra.aws.resource.group import AwsResourceGroup
 from phidata.infra.aws.resource.s3 import S3Bucket
 from phidata.infra.aws.resource.rds.db_cluster import DbCluster
+from phidata.infra.aws.resource.rds.db_subnet_group import DbSubnetGroup
 from phidata.infra.docker.config import DockerConfig
 from phidata.infra.docker.resource.image import DockerImage
 from phidata.infra.k8s.config import K8sConfig
@@ -285,7 +286,7 @@ glue_iam_role = create_glue_iam_role(
 
 # Vpc stack
 data_vpc_stack = CloudFormationStack(
-    name=f"{ws_key}-vpc",
+    name=f"{ws_key}-vpc-1",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
@@ -293,6 +294,11 @@ data_vpc_stack = CloudFormationStack(
 )
 
 ## Databases
+airflow_prd_db_subnet_group = DbSubnetGroup(
+    name="airflow-db-subnet",
+    description="DBSubnetGroup for airflow-db",
+    vpc_stack=data_vpc_stack,
+)
 airflow_prd_db = DbCluster(
     name="airflow-db",
     engine="aurora-postgresql",
@@ -303,7 +309,7 @@ airflow_prd_db = DbCluster(
     master_user_password=airflow_db_pass,
     database_name=airflow_db_schema,
     vpc_stack=data_vpc_stack,
-    db_subnet_group_name="test-db-subnet",
+    db_subnet_group=airflow_prd_db_subnet_group,
     storage_encrypted=True,
 )
 
@@ -345,6 +351,7 @@ aws_resources = AwsResourceGroup(
     # acm_certificates=[acm_certificate],
     s3_buckets=[data_s3_bucket],
     volumes=[prd_db_volume, airflow_db_volume, prd_redis_volume],
+    db_subnet_groups=[airflow_prd_db_subnet_group],
     dbs=[airflow_prd_db],
     iam_roles=[glue_iam_role],
     cloudformation_stacks=[data_vpc_stack],
