@@ -1,5 +1,5 @@
 [project]
-name = "data"
+name = "aws_data_platform"
 version = "0.1.0"
 requires-python = ">3.7"
 

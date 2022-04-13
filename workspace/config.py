@@ -13,12 +13,12 @@ from phidata.app.traefik import IngressRoute, LoadBalancerProvider
 from phidata.infra.aws.config import AwsConfig
 from phidata.infra.aws.create.iam.role import create_glue_iam_role
 from phidata.infra.aws.resource.acm.certificate import AcmCertificate
-from phidata.infra.aws.resource.cloudformation import CloudFormationStack
+from phidata.infra.aws.resource.cloudformation.stack import CloudFormationStack
 from phidata.infra.aws.resource.ec2.volume import EbsVolume
 from phidata.infra.aws.resource.eks.cluster import EksCluster
 from phidata.infra.aws.resource.eks.node_group import EksNodeGroup
 from phidata.infra.aws.resource.group import AwsResourceGroup
-from phidata.infra.aws.resource.s3 import S3Bucket
+from phidata.infra.aws.resource.s3.bucket import S3Bucket
 from phidata.infra.aws.resource.rds.db_cluster import DbCluster
 from phidata.infra.aws.resource.rds.db_subnet_group import DbSubnetGroup
 from phidata.infra.docker.config import DockerConfig
@@ -28,7 +28,6 @@ from phidata.infra.k8s.create.core.v1.service import ServiceType
 from phidata.infra.k8s.enums.image_pull_policy import ImagePullPolicy
 from phidata.workspace import WorkspaceConfig
 
-from workspace.secrets import load_balancer_source_ranges, airflow_db_user, airflow_db_pass, airflow_db_schema
 from workspace.whoami import (
     whoami_k8s_rg,
     whoami_service,
@@ -305,9 +304,9 @@ airflow_prd_db = DbCluster(
     # db_instance_class="db.m6g.large",
     availability_zones=[aws_az],
     engine_version="12.7",
-    master_username=airflow_db_user,
-    master_user_password=airflow_db_pass,
-    database_name=airflow_db_schema,
+    master_username="airflow",
+    master_user_password="airflow",
+    database_name="airflow",
     vpc_stack=data_vpc_stack,
     db_subnet_group=airflow_prd_db_subnet_group,
     storage_encrypted=True,
@@ -548,7 +547,6 @@ traefik_ingress_route = IngressRoute(
     access_logs_to_s3=True,
     access_logs_s3_bucket=lb_s3_bucket.name,
     access_logs_s3_bucket_prefix="prd",
-    load_balancer_source_ranges=load_balancer_source_ranges,
     secrets_file=ws_dir_path.joinpath("secrets/taefik_secrets.yml"),
 )
 
