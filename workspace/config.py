@@ -252,21 +252,21 @@ prd_db_volume = EbsVolume(
     name=f"prd-db-{ws_key}",
     size=32,
     availability_zone=aws_az,
-    skip_delete=True,
+    # skip_delete=True,
 )
 # EbsVolume for airflow-db
 airflow_db_volume = EbsVolume(
     name=f"airflow-db-{ws_key}",
     size=8,
     availability_zone=aws_az,
-    skip_delete=True,
+    # skip_delete=True,
 )
 # EbsVolume for prd-redis
 prd_redis_volume = EbsVolume(
     name=f"prd-redis-{ws_key}",
     size=1,
     availability_zone=aws_az,
-    skip_delete=True,
+    # skip_delete=True,
 )
 
 ## Iam Roles
@@ -274,7 +274,7 @@ prd_redis_volume = EbsVolume(
 glue_iam_role = create_glue_iam_role(
     name=f"glue-crawler-role",
     s3_buckets=[data_s3_bucket],
-    skip_delete=True,
+    # skip_delete=True,
 )
 
 # Vpc stack
@@ -283,7 +283,7 @@ data_vpc_stack = CloudFormationStack(
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
-    skip_delete=True,
+    # skip_delete=True,
 )
 
 ## Databases
@@ -291,7 +291,7 @@ airflow_prd_db_subnet_group = DbSubnetGroup(
     name="airflow-db-subnet",
     description="DBSubnetGroup for airflow-db",
     vpc_stack=data_vpc_stack,
-    skip_delete=True,
+    # skip_delete=True,
 )
 airflow_prd_db = DbCluster(
     name="airflow-db",
@@ -305,14 +305,14 @@ airflow_prd_db = DbCluster(
     vpc_stack=data_vpc_stack,
     db_subnet_group=airflow_prd_db_subnet_group,
     storage_encrypted=True,
-    skip_delete=True,
+    # skip_delete=True,
 )
 
 # EKS cluster
 data_eks_cluster = EksCluster(
     name=f"{ws_key}-cluster",
     vpc_stack=data_vpc_stack,
-    skip_delete=True,
+    # skip_delete=True,
 )
 # EKS cluster nodegroup
 data_eks_nodegroup = EksNodeGroup(
@@ -320,7 +320,7 @@ data_eks_nodegroup = EksNodeGroup(
     eks_cluster=data_eks_cluster,
     min_size=3,
     max_size=5,
-    skip_delete=True,
+    # skip_delete=True,
 )
 
 # ACM certificate for awsdataplatform.com
