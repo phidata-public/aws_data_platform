@@ -68,9 +68,9 @@ oauthlib==3.2.0
     # via requests-oauthlib
 pandas==1.3.5
     # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
-phicli==0.1.26
+phicli==0.1.27
     # via phidata
-phidata==0.1.26
+phidata==0.1.27
     # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
 psycopg2-binary==2.9.3
     # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
