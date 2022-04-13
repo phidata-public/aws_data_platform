@@ -107,8 +107,8 @@ def load_ticker_prices(**kwargs) -> bool:
     import pandas as pd
     from tiingo import TiingoClient
 
-    args: LoadTickerPricesArgs = LoadTickerPricesArgs(**kwargs)
-    logger.debug("GetTickerPriceArgs: {}".format(args))
+    args: LoadTickerPricesArgs = LoadTickerPricesArgs.from_kwargs(kwargs)
+    logger.info(f"GetTickerPriceArgs: {args}")
 
     if args.tickers is None and args.tickers_table is None:
         logger.error("Either tickers or tickers_table should be provided")

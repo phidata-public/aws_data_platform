@@ -94,6 +94,7 @@ dev_databox = Databox(
     # Creates an airflow user using details from env/databox_env.yml
     create_airflow_test_user=True,
     airflow_webserver_host_port=6180,
+    env_file=ws_dir_path.joinpath("env/databox_env.yml"),
     secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,

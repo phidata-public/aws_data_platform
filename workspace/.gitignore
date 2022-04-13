@@ -15,9 +15,6 @@ k8s/test
 # Ignore secrets
 secrets
 
-# Ignore env
-env
-
 # Ignore env variables passed to workflows
 local_env.py
 docker_env.py
