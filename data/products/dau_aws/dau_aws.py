@@ -88,6 +88,6 @@ dau_aws = DataProduct(
         download,
         upload,
         crawler,
-    ]
+    ],
 )
 dag = dau_aws.create_airflow_dag()

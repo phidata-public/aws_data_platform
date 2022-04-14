@@ -51,7 +51,6 @@ test_emr_cluster = EmrCluster(
                 "InstanceRole": "MASTER",
                 "InstanceType": "m3.xlarge",
                 "InstanceCount": 1,
-
             },
             {
                 "Name": "WorkerNodes",
@@ -97,5 +96,5 @@ emr = DataProduct(
     workflows=[
         create,
         delete,
-    ]
+    ],
 )

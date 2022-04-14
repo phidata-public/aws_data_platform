@@ -280,7 +280,7 @@ glue_iam_role = create_glue_iam_role(
 
 # Vpc stack
 data_vpc_stack = CloudFormationStack(
-    name=f"{ws_key}-vpc-1",
+    name=f"{ws_key}-vpc",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
@@ -297,15 +297,12 @@ airflow_prd_db_subnet_group = DbSubnetGroup(
 airflow_prd_db = DbCluster(
     name="airflow-db",
     engine="aurora-postgresql",
-    # db_instance_class="db.m6g.large",
     availability_zones=[aws_az],
-    engine_version="12.7",
-    master_username="airflow",
-    master_user_password="airflow",
-    database_name="airflow",
+    engine_version="13.6",
     vpc_stack=data_vpc_stack,
     db_subnet_group=airflow_prd_db_subnet_group,
     storage_encrypted=True,
+    secrets_file=ws_dir_path.joinpath("secrets/airflow_prd_db_secrets.yml"),
     # skip_delete=True,
 )
 
