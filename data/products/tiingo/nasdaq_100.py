@@ -1,5 +1,5 @@
 # Copied from https://bullishbears.com/nasdaq-stocks-list/
-nasdaq_100 = [
+nasdaq_100_tickers = [
     # ETFs
     "QQQ",
     "ONEQ",

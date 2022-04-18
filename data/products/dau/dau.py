@@ -1,9 +1,9 @@
 from phidata.asset.file import File
 from phidata.asset.table.sql.postgres import PostgresTable
-from phidata.product import DataProduct
-from phidata.workflow.run.sql.query import RunSqlQuery
-from phidata.workflow.upload.file.to_sql import UploadFileToSql
-from phidata.workflow.download.url.to_file import DownloadUrlToFile
+from phidata.task.run.sql.query import RunSqlQuery
+from phidata.task.upload.file.to_sql import UploadFileToSql
+from phidata.task.download.url.to_file import DownloadUrlToFile
+from phidata.workflow import Workflow
 
 from workspace.config import dev_db, pg_db_connection_id
 
@@ -18,8 +18,9 @@ from workspace.config import dev_db, pg_db_connection_id
 # Step 1: Download user_activity data from a URL.
 # Define a File object which points to $WORKSPACE_ROOT/storage/dau/user_activity.csv
 user_activity_csv = File(name="user_activity.csv", file_dir="dau")
-# Create a Workflow to download the user_activity data from a URL
+# Create a Task to download the user_activity data from a URL
 download = DownloadUrlToFile(
+    name="download",
     file=user_activity_csv,
     url="https://raw.githubusercontent.com/phidata-public/demo-data/main/dau_2021_10_01.csv",
 )
@@ -31,20 +32,24 @@ user_activity_table = PostgresTable(
     db_conn_id=pg_db_connection_id,
     db_conn_url=dev_db.get_db_connection_url_local(),
 )
-# Create a Workflow to load the file downloaded above to the PostgresTable
+# Create a Task to load the file downloaded above to the PostgresTable
 upload = UploadFileToSql(
+    name="upload",
     file=user_activity_csv,
     sql_table=user_activity_table,
     if_exists="replace",
 )
 
 # Step 3: Calculate daily active users and load to a postgres table
+# Define a postgres table named `daily_active_users`.
 daily_active_users_table = PostgresTable(
     name="daily_active_users",
     db_conn_id=pg_db_connection_id,
     db_conn_url=dev_db.get_db_connection_url_local(),
 )
+# Create a Task to run a SQL Query and load the PostgresTable
 load_dau = RunSqlQuery(
+    name="load_dau",
     query=f"""
     SELECT
         ds,
@@ -59,6 +64,6 @@ load_dau = RunSqlQuery(
     if_exists="replace",
 )
 
-# Create a DataProduct for these tasks
-dau = DataProduct(name="dau", workflows=[download, upload, load_dau])
-dag = dau.create_airflow_dag()
+# Create a Workflow for these tasks
+dau = Workflow(name="dau", tasks=[download, upload, load_dau])
+dag = dau.create_airflow_dag(is_paused_upon_creation=True)

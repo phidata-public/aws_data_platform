@@ -1,6 +1,6 @@
 # Copied from https://bullishbears.com/sp500-stocks-list/
 
-sp_500 = [
+sp_500_tickers = [
     # ETFs
     "SPY",
     "IVV",

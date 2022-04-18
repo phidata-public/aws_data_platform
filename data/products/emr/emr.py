@@ -1,45 +1,34 @@
-from phidata.product import DataProduct
+from phidata.asset.aws.s3 import S3Object
 from phidata.infra.aws.resource.emr.cluster import EmrCluster
-from phidata.workflow.aws.emr.create_cluster import CreateEmrCluster
-from phidata.workflow.aws.emr.delete_cluster import DeleteEmrCluster
+from phidata.task import TaskArgs
+from phidata.workflow import Workflow
 from phidata.utils.log import logger
 
-from workspace.config import data_vpc_stack
+from workspace.config import data_vpc_stack, data_s3_bucket
 
 ##############################################################################
-## An example data pipeline that creates an EMR cluster
+## An example data pipeline that creates an EMR cluster,
+## runs a job and then tears it down
 ##############################################################################
 
-cluster_subnets = []
-try:
-    private_subnets = data_vpc_stack.get_private_subnets()
-    public_subnets = data_vpc_stack.get_public_subnets()
-    if private_subnets:
-        cluster_subnets.extend(private_subnets)
-    if public_subnets:
-        cluster_subnets.extend(public_subnets)
-except Exception as e:
-    logger.error("Could not get subnets")
-
-calculate_pi_job = {
-    "Name": "calculate_pi",
-    "ActionOnFailure": "CONTINUE",
-    "HadoopJarStep": {
-        "Jar": "command-runner.jar",
-        "Args": ["/usr/lib/spark/bin/run-example", "SparkPi", "10"],
-    },
-}
-
+# Cluster name
+cluster_name = "test-emr"
+# Cluster log destination
+emr_cluster_logs = S3Object(
+    key=f"{cluster_name}/logs/",
+    bucket=data_s3_bucket,
+)
+# Step 1: Define the EmrCluster
 test_emr_cluster = EmrCluster(
-    name="test-emr-cluster",
+    name=cluster_name,
     release_label="emr-6.5.0",
+    log_uri=emr_cluster_logs.uri,
     applications=[
         {"Name": "Spark"},
         {"Name": "Hadoop"},
         {"Name": "Hive"},
         {"Name": "JupyterHub"},
         {"Name": "JupyterEnterpriseGateway"},
-        {"Name": "Livy"},
         {"Name": "Presto"},
         {"Name": "Spark"},
     ],
@@ -74,9 +63,7 @@ test_emr_cluster = EmrCluster(
         ],
         "KeepJobFlowAliveWhenNoSteps": True,
         "TerminationProtected": False,
-        "Ec2SubnetIds": cluster_subnets,
     },
-    steps=[calculate_pi_job],
     job_flow_role="EMR_EC2_DefaultRole",
     service_role="EMR_DefaultRole",
     tags=[
@@ -84,17 +71,62 @@ test_emr_cluster = EmrCluster(
             "Key": "environment",
             "Value": "test",
         },
+        {
+            "Key": "for-use-with-amazon-emr-managed-policies",
+            "Value": "true",
+        },
     ],
 )
 
-create = CreateEmrCluster(cluster=test_emr_cluster)
-delete = DeleteEmrCluster(cluster=test_emr_cluster)
+# Step 2: Create the workflow
+emr = Workflow(name="emr_test")
 
-# Create a DataProduct for these tasks
-emr = DataProduct(
-    name="emr",
-    workflows=[
-        create,
-        delete,
-    ],
-)
+
+# 2.1: Define typed inputs for our workflow
+class EmrWorkflowArgs(TaskArgs):
+    cluster: EmrCluster = test_emr_cluster
+
+
+# 2.2: Write a task to create the cluster
+@emr.task()
+def create_emr_cluster(**kwargs) -> bool:
+    args = EmrWorkflowArgs.from_kwargs(kwargs)
+    # update the vpc subnet ids
+
+    create_success = args.cluster.create()
+    if create_success:
+        logger.info("Create EmrCluster: success")
+    else:
+        logger.error("Create EmrCluster: failed")
+    return create_success
+
+
+# 2.3: Write a task to add/run the job
+@emr.task()
+def add_job(**kwargs) -> bool:
+    args = EmrWorkflowArgs.from_kwargs(kwargs)
+
+    calculate_pi_job = {
+        "Name": "calculate_pi",
+        "ActionOnFailure": "CONTINUE",
+        "HadoopJarStep": {
+            "Jar": "command-runner.jar",
+            "Args": ["/usr/lib/spark/bin/run-example", "SparkPi", "10"],
+        },
+    }
+
+    logger.info(f"Adding job:\n{calculate_pi_job}")
+    return True
+
+
+# 2.4: Write a task to delete the cluster
+@emr.task()
+def delete_emr_cluster(**kwargs) -> bool:
+    args = EmrWorkflowArgs.from_kwargs(kwargs)
+
+    delete_success = args.cluster.delete()
+    if delete_success:
+        logger.info("Delete EmrCluster: success")
+    else:
+        logger.error("Delete EmrCluster: failed")
+    return delete_success

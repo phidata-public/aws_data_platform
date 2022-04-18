@@ -35,7 +35,7 @@ from workspace.whoami import (
 )
 
 ws_key = "aws-dp"
-ws_dir_path = Path(__file__).parent.resolve()
+ws_root_path = Path(__file__).parent.resolve()
 
 ######################################################
 ## Configure docker resources
@@ -48,7 +48,7 @@ dev_db = PostgresDb(
     db_user="dev",
     db_password="dev",
     db_schema="dev",
-    # You can connect to this db on port 5532 (on the host machine)
+    # You can connect to this db on port 3532 (on the host machine)
     container_host_port=3532,
 )
 pg_db_connection_id = "pg_db"
@@ -59,10 +59,12 @@ dev_airflow_db = PostgresDb(
     db_user="airflow",
     db_password="airflow",
     db_schema="airflow",
-    # You can connect to this db on port 5632 (on the host machine)
+    # You can connect to this db on port 3432 (on the host machine)
     container_host_port=3432,
 )
-dev_airflow_db_connections = {pg_db_connection_id: dev_db.get_db_connection_url_docker()}
+dev_airflow_db_connections = {
+    pg_db_connection_id: dev_db.get_db_connection_url_docker()
+}
 
 # Dev redis: A redis instance to use as the celery backend for airflow
 dev_redis = Redis(command=["redis-server", "--save", "60", "1", "--loglevel", "debug"])
@@ -73,7 +75,7 @@ databox_image_tag = "2.2.5"
 databox_image = DockerImage(
     name=databox_image_name,
     tag=databox_image_tag,
-    path=str(ws_dir_path.parent),
+    path=str(ws_root_path.parent),
     dockerfile="workspace/databox.Dockerfile",
     print_build_log=True,
     use_verbose_logs=True,
@@ -94,8 +96,8 @@ dev_databox = Databox(
     # Creates an airflow user using details from env/databox_env.yml
     create_airflow_test_user=True,
     airflow_webserver_host_port=6180,
-    env_file=ws_dir_path.joinpath("env/databox_env.yml"),
-    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
+    env_file=ws_root_path.joinpath("env/databox_env.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/databox_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     use_cache=False,
     install_phidata_dev=True,
@@ -108,7 +110,7 @@ airflow_image_tag = "2.2.5"
 airflow_image = DockerImage(
     name=airflow_image_name,
     tag=airflow_image_tag,
-    path=str(ws_dir_path.parent),
+    path=str(ws_root_path.parent),
     dockerfile="workspace/airflow.Dockerfile",
     print_build_log=True,
     use_cache=False,
@@ -128,7 +130,7 @@ dev_airflow_ws = AirflowWebserver(
     db_app=dev_airflow_db,
     redis_app=dev_redis,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     # Creates an airflow user using details from the airflow_env.yaml
     create_airflow_test_user=True,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
@@ -148,7 +150,7 @@ dev_airflow_scheduler = AirflowScheduler(
     db_app=dev_airflow_db,
     redis_app=dev_redis,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     # use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
@@ -167,7 +169,7 @@ dev_airflow_default_workers = AirflowWorker(
     db_app=dev_airflow_db,
     redis_app=dev_redis,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     # use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
@@ -186,7 +188,7 @@ dev_airflow_high_pri_workers = AirflowWorker(
     db_app=dev_airflow_db,
     redis_app=dev_redis,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/dev_airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/dev_airflow_secrets.yml"),
     worker_log_host_port=8794,
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     # use_cache=False,
@@ -203,7 +205,7 @@ dev_airflow_flower = AirflowFlower(
     db_app=dev_airflow_db,
     redis_app=dev_redis,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     # use_cache=False implies the container will be recreated every time you run `phi ws up`
     # use_cache=False,
     db_connections={pg_db_connection_id: dev_db.get_db_connection_url_docker()},
@@ -251,21 +253,21 @@ logs_s3_bucket = S3Bucket(
 # EbsVolume for prd-db
 prd_db_volume = EbsVolume(
     name=f"prd-db-{ws_key}",
-    size=32,
+    size=1024,
     availability_zone=aws_az,
     # skip_delete=True,
 )
 # EbsVolume for airflow-db
 airflow_db_volume = EbsVolume(
     name=f"airflow-db-{ws_key}",
-    size=8,
+    size=64,
     availability_zone=aws_az,
     # skip_delete=True,
 )
 # EbsVolume for prd-redis
 prd_redis_volume = EbsVolume(
     name=f"prd-redis-{ws_key}",
-    size=1,
+    size=8,
     availability_zone=aws_az,
     # skip_delete=True,
 )
@@ -273,7 +275,7 @@ prd_redis_volume = EbsVolume(
 ## Iam Roles
 # Iam Role for Glue crawlers
 glue_iam_role = create_glue_iam_role(
-    name=f"glue-crawler-role",
+    name=f"{ws_key}-glue-crawler-role",
     s3_buckets=[data_s3_bucket],
     # skip_delete=True,
 )
@@ -288,23 +290,23 @@ data_vpc_stack = CloudFormationStack(
 )
 
 ## Databases
-airflow_prd_db_subnet_group = DbSubnetGroup(
-    name="airflow-db-subnet",
-    description="DBSubnetGroup for airflow-db",
-    vpc_stack=data_vpc_stack,
-    # skip_delete=True,
-)
-airflow_prd_db = DbCluster(
-    name="airflow-db",
-    engine="aurora-postgresql",
-    availability_zones=[aws_az],
-    engine_version="13.6",
-    vpc_stack=data_vpc_stack,
-    db_subnet_group=airflow_prd_db_subnet_group,
-    storage_encrypted=True,
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_prd_db_secrets.yml"),
-    # skip_delete=True,
-)
+# airflow_prd_db_subnet_group = DbSubnetGroup(
+#     name="airflow-db-subnet",
+#     description="DBSubnetGroup for airflow-db",
+#     vpc_stack=data_vpc_stack,
+#     # skip_delete=True,
+# )
+# airflow_prd_db = DbCluster(
+#     name="airflow-db",
+#     engine="aurora-postgresql",
+#     availability_zones=[aws_az],
+#     engine_version="13.6",
+#     vpc_stack=data_vpc_stack,
+#     db_subnet_group=airflow_prd_db_subnet_group,
+#     storage_encrypted=True,
+#     secrets_file=ws_root_path.joinpath("secrets/airflow_prd_db_secrets.yml"),
+#     # skip_delete=True,
+# )
 
 # EKS cluster
 data_eks_cluster = EksCluster(
@@ -336,7 +338,7 @@ acm_certificate = AcmCertificate(
         f"*.{domain}",
     ],
     store_cert_summary=True,
-    certificate_summary_file=ws_dir_path.joinpath("aws", "acm", domain),
+    certificate_summary_file=ws_root_path.joinpath("aws", "acm", domain),
 )
 
 aws_resources = AwsResourceGroup(
@@ -344,8 +346,6 @@ aws_resources = AwsResourceGroup(
     # acm_certificates=[acm_certificate],
     s3_buckets=[data_s3_bucket, logs_s3_bucket],
     volumes=[prd_db_volume, airflow_db_volume, prd_redis_volume],
-    db_subnet_groups=[airflow_prd_db_subnet_group],
-    dbs=[airflow_prd_db],
     iam_roles=[glue_iam_role],
     cloudformation_stacks=[data_vpc_stack],
     eks_cluster=data_eks_cluster,
@@ -366,7 +366,7 @@ prd_db = PostgresDb(
     name="prd-db",
     volume_type=PostgresVolumeType.AWS_EBS,
     ebs_volume=prd_db_volume,
-    secrets_file=ws_dir_path.joinpath("secrets/prd_postgres_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/prd_postgres_secrets.yml"),
 )
 
 # Airflow database: A postgres instance to use as the database for airflow
@@ -374,7 +374,7 @@ prd_airflow_db = PostgresDb(
     name="airflow-db",
     volume_type=PostgresVolumeType.AWS_EBS,
     ebs_volume=airflow_db_volume,
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_postgres_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_postgres_secrets.yml"),
 )
 
 # Prd redis: A redis instance to use as the celery backend for airflow
@@ -398,7 +398,7 @@ prd_databox = Databox(
     init_airflow_scheduler=True,
     # Creates an airflow user using details from env/databox_env.yml
     create_airflow_test_user=True,
-    secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/databox_secrets.yml"),
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 
@@ -419,7 +419,7 @@ prd_airflow_ws = AirflowWebserver(
     executor="CeleryExecutor",
     # Creates an airflow user using details from the airflow_env.yaml
     create_airflow_test_user=True,
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 
@@ -436,7 +436,7 @@ prd_airflow_scheduler = AirflowScheduler(
     wait_for_db=True,
     wait_for_redis=True,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 
@@ -456,7 +456,7 @@ prd_airflow_default_workers = AirflowWorker(
     wait_for_db=True,
     wait_for_redis=True,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 
@@ -476,7 +476,7 @@ prd_airflow_high_pri_workers = AirflowWorker(
     wait_for_db=True,
     wait_for_redis=True,
     executor="CeleryExecutor",
-    secrets_file=ws_dir_path.joinpath("secrets/airflow_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/airflow_secrets.yml"),
     db_connections={pg_db_connection_id: prd_db.get_db_connection_url_k8s()},
 )
 
@@ -534,7 +534,7 @@ traefik_ingress_route = IngressRoute(
     access_logs_to_s3=True,
     access_logs_s3_bucket=logs_s3_bucket.name,
     access_logs_s3_bucket_prefix="prd",
-    secrets_file=ws_dir_path.joinpath("secrets/taefik_secrets.yml"),
+    secrets_file=ws_root_path.joinpath("secrets/taefik_secrets.yml"),
 )
 
 prd_k8s_config = K8sConfig(

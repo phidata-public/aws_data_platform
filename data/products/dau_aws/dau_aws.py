@@ -1,12 +1,12 @@
 from phidata.asset.file import File
 from phidata.asset.aws.s3 import S3Object
-from phidata.asset.aws.glue.crawler import GlueCrawler, GlueS3Target
 from phidata.asset.aws.athena.query import AthenaQuery
-from phidata.product import DataProduct
-from phidata.workflow.aws.athena.run_query import RunAthenaQuery
-from phidata.workflow.aws.glue.create_crawler import CreateGlueCrawler
-from phidata.workflow.upload.file.to_s3 import UploadFileToS3
-from phidata.workflow.download.url.to_file import DownloadUrlToFile
+from phidata.task.aws.athena import RunAthenaQuery
+from phidata.task.aws.glue import StartGlueCrawler
+from phidata.task.upload.file.to_s3 import UploadFileToS3
+from phidata.task.download.url.to_file import DownloadUrlToFile
+from phidata.infra.aws.resource.glue.crawler import GlueCrawler, GlueS3Target
+from phidata.workflow import Workflow
 
 from workspace.config import data_s3_bucket, glue_iam_role
 
@@ -24,6 +24,7 @@ from workspace.config import data_s3_bucket, glue_iam_role
 user_activity_csv = File(name="user_activity.csv", file_dir="dau_aws")
 # Create a Workflow to download the user_activity data from a URL
 download = DownloadUrlToFile(
+    name="download",
     file=user_activity_csv,
     url="https://raw.githubusercontent.com/phidata-public/demo-data/main/dau_2021_10_01.csv",
 )
@@ -37,6 +38,7 @@ user_activity_s3 = S3Object(
 )
 # Create a Workflow to upload the file downloaded above to our S3 object
 upload = UploadFileToS3(
+    name="upload",
     file=user_activity_csv,
     s3_object=user_activity_s3,
 )
@@ -46,7 +48,7 @@ upload = UploadFileToS3(
 database_name = "users"
 table_name = pipeline_name
 user_activity_crawler = GlueCrawler(
-    name=f"{pipeline_name}-crawler-2",
+    name=f"{pipeline_name}_crawler",
     iam_role=glue_iam_role,
     database_name=database_name,
     s3_targets=[
@@ -57,14 +59,14 @@ user_activity_crawler = GlueCrawler(
     ],
 )
 # Create a Workflow to create and start the crawler
-crawler = CreateGlueCrawler(
+start_crawler = StartGlueCrawler(
+    name="start_crawler",
     crawler=user_activity_crawler,
-    start_crawler=True,
 )
 
 # Step 4: Run an athena query to calculate daily user count
 user_count_query = AthenaQuery(
-    name=f"{pipeline_name}-query",
+    name="load_dau",
     query_string=f"""
     SELECT
         ds,
@@ -82,12 +84,12 @@ query = RunAthenaQuery(
 )
 
 # Create a DataProduct for these tasks
-dau_aws = DataProduct(
+dau_aws = Workflow(
     name="dau_aws",
-    workflows=[
+    tasks=[
         download,
         upload,
-        crawler,
+        start_crawler,
     ],
 )
-dag = dau_aws.create_airflow_dag()
+dag = dau_aws.create_airflow_dag(is_paused_upon_creation=True)
