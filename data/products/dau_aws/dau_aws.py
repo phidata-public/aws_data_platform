@@ -19,7 +19,9 @@ from workspace.config import data_s3_bucket, glue_iam_role
 # Step 1: Download user_activity data from a URL and upload to s3.
 
 # Url to download
-url = "https://raw.githubusercontent.com/phidata-public/demo-data/main/dau_2021_10_01.csv"
+url = (
+    "https://raw.githubusercontent.com/phidata-public/demo-data/main/dau_2021_10_01.csv"
+)
 
 # Define a S3 object for this file.
 table_name = "daily_active_users"

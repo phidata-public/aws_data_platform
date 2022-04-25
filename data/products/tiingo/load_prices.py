@@ -23,20 +23,14 @@ prices_table = PostgresTable(
 )
 
 
-# Step 2: Create the workflow which loads the prices_table
-prices = Workflow(
-    name="load_daily_prices",
-    outputs=[prices_table],
-)
-
-
+# Step 2: Build a workflow that loads the prices_table
 # 2.1: Define typed inputs for our workflow
 #   Create a class that inherits from TaskArgs
 #   and contains the inputs for our task as class variables
 class LoadPricesArgs(TaskArgs):
-    # The prices table to load
+    # The table to load
     prices_table: PostgresTable = prices_table
-    # Tickers to get prices for: as a string or list of strings
+    # Tickers to get prices for, as a string or list of strings
     tickers: Union[str, List[str]] = ["AAPL", "GOOG"]
     # start_date: Start of price download range in YYYY-MM-DD format.
     start_date: Optional[str] = None
@@ -45,17 +39,16 @@ class LoadPricesArgs(TaskArgs):
     # Rows to cache before writing to db
     cache_size: int = 5000
     frequency: str = "daily"
-    # Tiingo Api key
-    # We should set TIINGO_API_KEY as an env variable as this key should not be checked in
-    # But for local testing, we can pass the api_key to this function if needed
+    # Tiingo Api key should be provided using the TIINGO_API_KEY
+    # env variable. But for local testing, we can pass the api_key here if needed
     api_key: Optional[str] = None
     # If True, will drop table before loading data, thereby rewriting the table
     drop_table_before_load: bool = False
 
 
 # 2.2: Write a task to drop daily data.
-@prices.task()
-def drop_daily_prices(**kwargs) -> bool:
+@task
+def drop_prices(**kwargs) -> bool:
     """
     This task drops daily data before loading, so we dont have duplicates
     """
@@ -75,10 +68,11 @@ def drop_daily_prices(**kwargs) -> bool:
     return True
 
 
-# 2.3: Write a task to load daily prices
-# Instead of using the @workflow.task decorator, we will use the
-# independent @task decorator, so we can reuse this function for multiple tickers.
-# Note that there are no () when using the @task decorator
+# 2.3: Instantiate the task
+drop = drop_prices()
+
+
+# 2.4: Write a task to load daily prices
 @task
 def load_ticker_prices(**kwargs) -> bool:
 
@@ -109,7 +103,7 @@ def load_ticker_prices(**kwargs) -> bool:
     # List of tickers to read prices for
     tickers_list: List[str] = []
 
-    # if only 1 ticker is provided, convert to a list
+    # If a ticker is provided as a str, convert to a list
     if isinstance(args.tickers, str):
         tickers_list = [args.tickers]
     elif isinstance(args.tickers, list):
@@ -141,7 +135,6 @@ def load_ticker_prices(**kwargs) -> bool:
             prices_df["ds"] = run_date
             prices_df.reset_index(drop=True, inplace=True)
             prices_df.set_index(["ds", "ticker"], inplace=True)
-            # prices_df.drop("date", axis=1, inplace=True)
             write_success = args.prices_table.write_pandas_df(
                 prices_df, if_exists="append"
             )
@@ -153,32 +146,41 @@ def load_ticker_prices(**kwargs) -> bool:
     prices_df["ds"] = run_date
     prices_df.reset_index(drop=True, inplace=True)
     prices_df.set_index(["ds", "ticker"], inplace=True)
-    # prices_df.drop("date", axis=1, inplace=True)
 
     # logger.info("Sample data:")
     # logger.info(prices_df[:5])
     return args.prices_table.write_pandas_df(prices_df, if_exists="append")
 
 
-# 2.4: Instantiate the tasks
+# 2.5: Instantiate the task to load daily nasdaq prices
 # Because we are reusing the load_ticker_prices task, we need to provide
 #   a unique name so airflow can create separate tasks for each
 # Run this:
 #   Locally: `phi wf run tiingo:prices:nasdaq`
 #   In a Dev databox: `phi wf run tiingo:prices:nasdaq -e dev`
 #   In a Prd databox: `phi wf run tiingo:prices:nasdaq -e prd`
-daily_nasdaq = load_ticker_prices(
-    name="daily_nasdaq",
+load_nasdaq = load_ticker_prices(
+    name="load_nasdaq",
     tickers=nasdaq_100_tickers,
 )
-prices.add_task(daily_nasdaq)
 
+# 2.6: Instantiate the task to load daily s&p 500 prices
 # Run this:
 #   Locally: `phi wf run tiingo:prices:sp500`
 #   In a Dev databox: `phi wf run tiingo:prices:sp500 -e dev`
 #   In a Prd databox: `phi wf run tiingo:prices:sp500 -e prd`
-daily_sp500 = load_ticker_prices(
-    name="daily_sp500",
+load_sp500 = load_ticker_prices(
+    name="load_sp500",
     tickers=sp_500_tickers,
 )
-prices.add_task(daily_sp500)
+
+# 2.6: Create a Workflow object and add the tasks
+prices = Workflow(
+    name="prices",
+    tasks=[drop, load_nasdaq, load_sp500],
+    graph={
+        load_nasdaq: [drop],
+        load_sp500: [drop],
+    },
+    outputs=[prices_table],
+)

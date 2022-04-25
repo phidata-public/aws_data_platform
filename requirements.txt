@@ -6,12 +6,12 @@
 #
 anyio==3.5.0
     # via httpcore
-boto3==1.21.46
+boto3==1.22.0
     # via
     #   aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
     #   phidata
     #   phiterm
-botocore==1.24.46
+botocore==1.25.0
     # via
     #   boto3
     #   s3transfer
@@ -68,9 +68,9 @@ oauthlib==3.2.0
     # via requests-oauthlib
 pandas==1.3.5
     # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
-phidata==0.1.36
+phidata==0.1.37
     # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
-phiterm==0.1.36
+phiterm==0.1.37
     # via phidata
 psycopg2-binary==2.9.3
     # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)

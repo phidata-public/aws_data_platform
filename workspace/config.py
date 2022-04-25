@@ -52,9 +52,7 @@ dev_db = PostgresDb(
     container_host_port=3532,
 )
 pg_db_connection_id = "pg_db"
-dev_airflow_connections = {
-    pg_db_connection_id: dev_db.get_db_connection_url_docker()
-}
+dev_airflow_connections = {pg_db_connection_id: dev_db.get_db_connection_url_docker()}
 
 # Dev Airflow db: A postgres instance to use as the database for airflow
 dev_airflow_db = PostgresDb(
@@ -282,7 +280,7 @@ glue_iam_role = create_glue_iam_role(
 
 # Vpc stack
 data_vpc_stack = CloudFormationStack(
-    name=f"{ws_key}-vpc",
+    name=f"{ws_key}-vpc-1",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
     # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
     # uncomment when workspace is production-ready
@@ -320,7 +318,8 @@ data_eks_nodegroup = EksNodeGroup(
     name=f"{ws_key}-ng",
     eks_cluster=data_eks_cluster,
     min_size=3,
-    max_size=5,
+    max_size=7,
+    instance_types=["c5.xlarge"],
     # skip_delete=True,
 )
 
@@ -370,9 +369,7 @@ prd_db = PostgresDb(
     secrets_file=ws_dir_path.joinpath("secrets/prd_postgres_secrets.yml"),
 )
 pg_db_connection_id = "pg_db"
-prd_airflow_connections = {
-    pg_db_connection_id: prd_db.get_db_connection_url_k8s()
-}
+prd_airflow_connections = {pg_db_connection_id: prd_db.get_db_connection_url_k8s()}
 
 # Airflow database: A postgres instance to use as the database for airflow
 prd_airflow_db = PostgresDb(
