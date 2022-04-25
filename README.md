@@ -1,1 +1,1 @@
-## A production grade data platform built on AWS
+## A data platform built on AWS

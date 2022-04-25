@@ -4,9 +4,10 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-data = {editable = true, path = "."}
+aws_data_platform = {editable = true, path = "."}
 
 [packages]
 apache-airflow = "==2.2.5"
 apache-airflow-providers-amazon = "==3.2.0"
 apache-airflow-providers-postgres = "==4.0.0"
+apache-airflow-providers-presto = "==2.1.2"
