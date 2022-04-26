@@ -396,6 +396,8 @@ prd_databox = Databox(
     # Mount the workspace on the container using git-sync
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
+    # Init Airflow webserver when the container starts
+    init_airflow_webserver=True,
     # Creates an airflow user using details from secrets/databox_secrets.yml
     create_airflow_test_user=True,
     secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),

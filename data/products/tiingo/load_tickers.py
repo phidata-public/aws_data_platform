@@ -13,7 +13,7 @@ from workspace.config import dev_db, pg_db_connection_id
 ##############################################################################
 
 
-# Step 1: Define a postgres table named `tickers`.
+# Step 1: Define a postgres table named `daily_tickers`.
 #   For testing locally, use the connection url from dev_db.
 #   For dev/prd use the pg_db_connection_id
 tickers_table = PostgresTable(

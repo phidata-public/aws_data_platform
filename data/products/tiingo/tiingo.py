@@ -2,6 +2,7 @@ from phidata.product import DataProduct
 
 from data.products.tiingo.load_tickers import tickers
 from data.products.tiingo.load_prices import prices
+from data.products.tiingo.load_etfs import etf_prices
 
 ##############################################################################
 ## This file defines a data product that contains workflows to:
@@ -11,5 +12,9 @@ from data.products.tiingo.load_prices import prices
 ##############################################################################
 
 
-tiingo = DataProduct(name="tiingo", workflows=[tickers, prices])
+tiingo = DataProduct(
+    name="tiingo",
+    workflows=[tickers, prices, etf_prices],
+    graph={etf_prices: [tickers]},
+)
 dag = tiingo.create_airflow_dag(is_paused_upon_creation=True)
