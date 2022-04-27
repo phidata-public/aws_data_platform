@@ -6,12 +6,12 @@
 #
 anyio==3.5.0
     # via httpcore
-boto3==1.22.0
+boto3==1.22.1
     # via
     #   aws-data-platform
     #   phidata
     #   phiterm
-botocore==1.25.0
+botocore==1.25.1
     # via
     #   boto3
     #   s3transfer
@@ -66,7 +66,7 @@ numpy==1.22.3
     # via pandas
 oauthlib==3.2.0
     # via requests-oauthlib
-pandas==1.3.5
+pandas==1.4.2
     # via aws-data-platform
 phidata==0.1.38
     # via aws-data-platform
@@ -108,7 +108,7 @@ requests-oauthlib==1.3.1
     # via kubernetes
 rfc3986[idna2008]==1.5.0
     # via httpx
-rich==12.2.0
+rich==12.3.0
     # via
     #   phidata
     #   phiterm
@@ -128,7 +128,7 @@ sniffio==1.2.0
     #   anyio
     #   httpcore
     #   httpx
-sqlalchemy==1.3.24
+sqlalchemy==1.4.36
     # via aws-data-platform
 tiingo==0.14.0
     # via aws-data-platform

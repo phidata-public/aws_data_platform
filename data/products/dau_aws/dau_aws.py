@@ -17,13 +17,7 @@ from workspace.config import data_s3_bucket, glue_iam_role
 ##############################################################################
 
 # Step 1: Download user_activity data from a URL and upload to s3.
-
-# Url to download
-url = (
-    "https://raw.githubusercontent.com/phidata-public/demo-data/main/dau_2021_10_01.csv"
-)
-
-# Define a S3 object for this file.
+# Define a S3 object for this file. Use the data_s3_bucket from the workspace config.
 table_name = "daily_active_users"
 user_activity_s3 = S3Object(
     key=f"{table_name}/ds_2021_10_01.csv",
@@ -31,6 +25,9 @@ user_activity_s3 = S3Object(
 )
 
 # Create a task that downloads the file and uploads to s3
+url = (
+    "https://raw.githubusercontent.com/phidata-public/demo-data/main/dau_2021_10_01.csv"
+)
 download = DownloadUrlToS3(
     name="download",
     url=url,
@@ -38,7 +35,6 @@ download = DownloadUrlToS3(
 )
 
 # Step 2: Create a glue crawler which creates a table from the file.
-
 # Define a GlueCrawler for the S3 object. Use the glue_iam_role from the workspace config.
 database_name = "users"
 user_activity_crawler = GlueCrawler(
@@ -60,25 +56,26 @@ start_crawler = StartGlueCrawler(
 )
 
 # Step 3: Run an athena query to calculate daily user count.
-user_count_query = AthenaQuery(
-    name="load_dau",
-    query_string=f"""
-    SELECT
-        ds,
-        SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) AS active_users
-    FROM {database_name}.{table_name}
-    GROUP BY ds
-    ORDER BY ds
-    """,
-    database=database_name,
-    output_location=f"s3://{data_s3_bucket.name}/queries/{database_name}/{table_name}/",
-)
 query = RunAthenaQuery(
-    query=user_count_query,
+    name="query",
+    query=AthenaQuery(
+        name="dau_query",
+        query_string=f"""
+        SELECT
+            ds,
+            SUM(CASE WHEN is_active=1 THEN 1 ELSE 0 END) AS active_users
+        FROM {database_name}.{table_name}
+        GROUP BY ds
+        ORDER BY ds
+        """,
+        database=database_name,
+        output_location=f"s3://{data_s3_bucket.name}/queries/{database_name}/{table_name}/",
+    ),
     get_results=True,
 )
 
-# Create a DataProduct for these tasks
+# Create a workflow for these tasks.
+# We run the query task manually so do not add it as part of the workflow.
 dau_aws = Workflow(
     name="dau_aws",
     tasks=[

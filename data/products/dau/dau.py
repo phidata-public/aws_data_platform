@@ -13,9 +13,7 @@ from workspace.config import dev_db, pg_db_connection_id
 ##############################################################################
 
 # Step 1: Download user_activity data from a URL and load to a postgres table
-
-# Define a postgres table named `user_activity`.
-# Use the connection url from dev_db
+# Define a postgres table named `user_activity`. Use the connection url from dev_db in the workspace config.
 user_activity_table = PostgresTable(
     name="user_activity",
     db_conn_id=pg_db_connection_id,
@@ -31,7 +29,6 @@ download = DownloadUrlToSql(
 )
 
 # Step 2: Calculate daily active users and load results to a postgres table
-
 # Define a postgres table named `daily_active_users`.
 daily_active_users_table = PostgresTable(
     name="daily_active_users",

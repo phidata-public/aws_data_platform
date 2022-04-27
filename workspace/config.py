@@ -253,21 +253,21 @@ prd_db_volume = EbsVolume(
     name=f"prd-db-{ws_key}",
     size=1024,
     availability_zone=aws_az,
-    # skip_delete=True,
+    skip_delete=True,
 )
 # EbsVolume for airflow-db
 airflow_db_volume = EbsVolume(
     name=f"airflow-db-{ws_key}",
     size=64,
     availability_zone=aws_az,
-    # skip_delete=True,
+    skip_delete=True,
 )
 # EbsVolume for prd-redis
 prd_redis_volume = EbsVolume(
     name=f"prd-redis-{ws_key}",
     size=8,
     availability_zone=aws_az,
-    # skip_delete=True,
+    skip_delete=True,
 )
 
 ## Iam Roles
@@ -282,7 +282,8 @@ glue_iam_role = create_glue_iam_role(
 data_vpc_stack = CloudFormationStack(
     name=f"{ws_key}-vpc-1",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
-    # skip_delete=True implies this resource will NOT be deleted with `phi ws down`
+    # implies this resource will NOT be deleted with `phi ws down`
+    skip_delete=True
     # uncomment when workspace is production-ready
     # skip_delete=True,
 )
@@ -397,7 +398,7 @@ prd_databox = Databox(
     git_sync_repo="https://github.com/phidata-public/aws_data_platform.git",
     git_sync_branch="main",
     # Init Airflow webserver when the container starts
-    init_airflow_webserver=True,
+    # init_airflow_webserver=True,
     # Creates an airflow user using details from secrets/databox_secrets.yml
     create_airflow_test_user=True,
     secrets_file=ws_dir_path.joinpath("secrets/databox_secrets.yml"),
