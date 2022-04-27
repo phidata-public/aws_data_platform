@@ -6,12 +6,12 @@
 #
 anyio==3.5.0
     # via httpcore
-boto3==1.22.1
+boto3==1.22.2
     # via
-    #   aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
+    #   aws-data-platform
     #   phidata
     #   phiterm
-botocore==1.25.1
+botocore==1.25.2
     # via
     #   boto3
     #   s3transfer
@@ -48,9 +48,7 @@ h11==0.12.0
 httpcore==0.14.7
     # via httpx
 httpx==0.22.0
-    # via
-    #   aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
-    #   phiterm
+    # via phiterm
 idna==3.3
     # via
     #   anyio
@@ -68,14 +66,14 @@ numpy==1.22.3
     # via pandas
 oauthlib==3.2.0
     # via requests-oauthlib
-pandas==1.4.2
-    # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
+pandas==1.3.5
+    # via aws-data-platform
 phidata==0.1.38
-    # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
+    # via aws-data-platform
 phiterm==0.1.38
     # via phidata
 psycopg2-binary==2.9.3
-    # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
+    # via aws-data-platform
 pyasn1==0.4.8
     # via
     #   pyasn1-modules
@@ -130,10 +128,10 @@ sniffio==1.2.0
     #   anyio
     #   httpcore
     #   httpx
-sqlalchemy==1.4.36
-    # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
+sqlalchemy==1.3.24
+    # via aws-data-platform
 tiingo==0.14.0
-    # via aws-data-platform (/Users/zu/phidata-public/aws_data_platform/pyproject.toml)
+    # via aws-data-platform
 tomli==2.0.1
     # via phiterm
 typer==0.4.1
