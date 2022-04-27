@@ -5,6 +5,7 @@ requires-python = ">3.7"
 
 dependencies = [
     "boto3",
+    "httpx",
     "pandas",
     "phidata>=0.1.38",
     "psycopg2-binary",

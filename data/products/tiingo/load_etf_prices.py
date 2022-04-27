@@ -1,4 +1,4 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from phidata.asset.table.sql.postgres import PostgresTable
 from phidata.workflow import Workflow
@@ -133,7 +133,7 @@ def load_etf_prices(**kwargs) -> bool:
             )
             continue
 
-        prices_df = prices_df.append(single_ticker_price)
+        prices_df = pd.concat([prices_df, single_ticker_price])
 
         # write to table if rows_in_df > cache_size
         rows_in_df = prices_df.shape[0]
