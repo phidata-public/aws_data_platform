@@ -37,9 +37,7 @@ from workspace.whoami import (
 ws_key = "aws-dp"
 ws_dir_path = Path(__file__).parent.resolve()
 
-######################################################
-## Configure docker resources
-######################################################
+# -*- Define docker resources
 
 # Dev database: A postgres instance for storing dev data
 # This db can be accessed on port 5532 locally or using the 'pg_db' conn_id in airflow
@@ -208,6 +206,7 @@ dev_airflow_flower = AirflowFlower(
     db_connections=dev_airflow_connections,
 )
 
+# -*- Define the DockerConfig
 dev_docker_config = DockerConfig(
     apps=[
         dev_db,
@@ -223,19 +222,13 @@ dev_docker_config = DockerConfig(
     images=[databox_image, airflow_image],
 )
 
-######################################################
-## Configure AWS resources
-######################################################
+# -*- Define AWS resources
 
 domain = "awsdataplatform.com"
 aws_az = "us-east-1a"
 aws_region = "us-east-1"
 
-######################################################
-## AWS Infrastructure
-######################################################
-
-## S3 buckets
+# -*- S3 buckets
 # S3 bucket for storing data
 data_s3_bucket = S3Bucket(
     name=f"phi-{ws_key}-data",
@@ -247,7 +240,7 @@ logs_s3_bucket = S3Bucket(
     acl="private",
 )
 
-## EbsVolumes
+# -*- EbsVolumes
 # EbsVolume for prd-db
 prd_db_volume = EbsVolume(
     name=f"prd-db-{ws_key}",
@@ -270,7 +263,7 @@ prd_redis_volume = EbsVolume(
     skip_delete=True,
 )
 
-## Iam Roles
+# -*- Iam Roles
 # Iam Role for Glue crawlers
 glue_iam_role = create_glue_iam_role(
     name=f"{ws_key}-glue-crawler-role",
@@ -278,7 +271,7 @@ glue_iam_role = create_glue_iam_role(
     # skip_delete=True,
 )
 
-# Vpc stack
+# -*- Vpc stack
 data_vpc_stack = CloudFormationStack(
     name=f"{ws_key}-vpc-1",
     template_url="https://amazon-eks.s3.us-west-2.amazonaws.com/cloudformation/2020-10-29/amazon-eks-vpc-private-subnets.yaml",
@@ -288,7 +281,7 @@ data_vpc_stack = CloudFormationStack(
     # skip_delete=True,
 )
 
-## Databases
+# -*- Databases
 # airflow_prd_db_subnet_group = DbSubnetGroup(
 #     name="airflow-db-subnet",
 #     description="DBSubnetGroup for airflow-db",
@@ -307,14 +300,14 @@ data_vpc_stack = CloudFormationStack(
 #     # skip_delete=True,
 # )
 
-# EKS cluster
+# -*- EKS cluster
 data_eks_cluster = EksCluster(
     name=f"{ws_key}-cluster",
     vpc_stack=data_vpc_stack,
     # skip_delete=True,
 )
 
-# EKS cluster nodegroup
+# -*- EKS cluster nodegroup
 data_eks_nodegroup = EksNodeGroup(
     name=f"{ws_key}-ng",
     eks_cluster=data_eks_cluster,
@@ -324,7 +317,7 @@ data_eks_nodegroup = EksNodeGroup(
     # skip_delete=True,
 )
 
-# ACM certificate for awsdataplatform.com
+# -*- ACM certificate for awsdataplatform.com
 acm_certificate = AcmCertificate(
     name=domain,
     domain_name=domain,
@@ -353,14 +346,13 @@ aws_resources = AwsResourceGroup(
     eks_nodegroups=[data_eks_nodegroup],
 )
 
+# -*- Define the AwsConfig
 prd_aws_config = AwsConfig(
     env="prd",
     resources=aws_resources,
 )
 
-######################################################
-## Applications running on EKS Cluster
-######################################################
+# -*- Applications running on EKS Cluster
 
 # Prd database: A postgres instance for storing prd data
 prd_db = PostgresDb(
@@ -405,7 +397,7 @@ prd_databox = Databox(
     db_connections=prd_airflow_connections,
 )
 
-## Airflow: For orchestrating prod workflows
+# Airflow: For orchestrating prod workflows
 # Airflow webserver
 prd_airflow_ws = AirflowWebserver(
     image_name=airflow_image_name,
@@ -541,6 +533,7 @@ traefik_ingress_route = IngressRoute(
     secrets_file=ws_dir_path.joinpath("secrets/taefik_secrets.yml"),
 )
 
+# -*- Define the K8sConfig
 prd_k8s_config = K8sConfig(
     env="prd",
     apps=[
@@ -558,9 +551,7 @@ prd_k8s_config = K8sConfig(
     eks_cluster=data_eks_cluster,
 )
 
-######################################################
-## Configure the workspace
-######################################################
+# -*- Define the WorkspaceConfig
 workspace = WorkspaceConfig(
     default_env="dev",
     docker=[dev_docker_config],
